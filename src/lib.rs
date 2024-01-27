@@ -1,8 +1,9 @@
 use std::ops::{Add, Sub, Neg, Mul, Div};
+use std::vec;
 
 const EPS: f32 = 1e-5;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Tuple {
     pub x: f32,
     pub y: f32,
@@ -10,6 +11,34 @@ pub struct Tuple {
     w: f32,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Color {
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32
+}
+
+pub struct Canvas {
+    pub width: i32,
+    pub height: i32,
+    pixels: Vec<Color>,
+}
+
+impl Canvas {
+    pub fn new(width: i32, height: i32) -> Self {
+        Canvas {width , height, pixels: vec![color(0.0,0.0,0.0); (width * height) as usize]}
+    }
+
+    pub fn write_pixel(&mut self, x: i32, y: i32, c: Color) {
+        let idx = (y*self.width + x) as usize;
+        self.pixels[idx] = c;
+    }
+
+    pub fn pixel_at(&self, x: i32, y: i32) -> Color {
+        let idx = (y*self.width + x) as usize;
+        self.pixels[idx]
+    }
+}
 pub type Point = Tuple;
 pub type Vector = Tuple;
 
@@ -21,11 +50,27 @@ impl Add for Tuple {
     }
 }
 
+impl Add for Color {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Color { red: self.red + rhs.red, green: self.green + rhs.green, blue: self.blue + rhs.blue }
+    }
+}
+
 impl Sub for Tuple {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
         Tuple { x: self.x - rhs.x, y: self.y - rhs.y, z: self.z - rhs.z, w: self.w - rhs.w }
+    }
+}
+
+impl Sub for Color {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Color { red: self.red - rhs.red, green: self.green - rhs.green, blue: self.blue - rhs.blue}
     }
 }
 
@@ -45,6 +90,22 @@ impl Mul<f32> for Tuple {
     }
 }
 
+impl Mul<f32> for Color {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Color {red: self.red * rhs, green: self.green * rhs, blue: self.blue * rhs}
+    }
+}
+
+impl Mul<Color> for Color {
+    type Output = Color;
+
+    fn mul(self, rhs: Color) -> Self::Output {
+        Color { red: self.red * rhs.red, green: self.green * rhs.green, blue: self.blue * rhs.blue}
+    }
+}
+
 impl Div<f32> for Tuple {
     type Output = Self;
 
@@ -61,12 +122,23 @@ impl PartialEq for Tuple {
     }
 }
 
+impl PartialEq for Color {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.red.sub(rhs.red).abs() < EPS &&
+            self.green.sub(rhs.green).abs() < EPS &&
+            self.blue.sub(rhs.blue).abs() < EPS
+    }
+}
 pub fn point(x: f32, y: f32, z: f32) -> Point {
     Point { x, y, z, w: 1.0 }
 }
 
 pub fn vector(x: f32, y: f32, z: f32) -> Vector {
     Vector { x, y, z, w: 0.0 }
+}
+
+pub fn color(red: f32, green: f32, blue: f32) -> Color {
+    Color { red, green, blue }
 }
 
 pub fn magnitude(v: Vector) -> f32 {
@@ -100,6 +172,76 @@ fn cross(a: Vector, b: Vector) -> Vector {
     vector(a.y * b.z - a.z * b.y,
            a.z * b.x - a.x * b.z,
            a.x * b.y - a.y * b.x)
+}
+
+fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
+    let c = c.mul(255.0).clamp(0.0, 255.0);
+    let c_str = format!("{} ", c.round());
+    let mut content = String::new();
+    let mut new_line_len = line_len + c_str.len();
+    let mut new_line = false;
+
+    if new_line_len > 70 {
+        content.push('\n');
+        content.push_str(c_str.as_str());
+        new_line_len = c_str.len();
+        new_line = true
+    } else {
+        content.push_str(c_str.as_str());
+        new_line_len = c_str.len();
+    }
+
+    (content, new_line_len, new_line)
+}
+
+pub fn canvas_to_ppm(c: Canvas) -> String {
+    let mut content = String::from("P3\n");
+    content.push_str(format!("{} {}\n", c.width, c.height).as_str());
+    content.push_str("255\n");
+
+    let mut line_len = 0;
+    for y in 0..c.height {
+        for x in 0..c.width {
+            let color = c.pixel_at(x, y);
+            let (content_red, line_len_red, new_line) = append_string_or_new_line(color.red, line_len);
+            if new_line {
+                content = content.trim().to_string();
+                line_len = 0;
+            }
+            content.push_str(content_red.as_str());
+            line_len += line_len_red;
+
+            let (content_green, line_len_green, new_line) = append_string_or_new_line(color.green, line_len);
+            if new_line {
+                content = content.trim().to_string();
+                line_len = 0;
+            }
+            content.push_str(content_green.as_str());
+            line_len += line_len_green;
+
+            let (content_blue, line_len_blue, new_line) = append_string_or_new_line(color.blue, line_len);
+            if new_line {
+                content = content.trim().to_string();
+                line_len = 0;
+            }
+            content.push_str(content_blue.as_str());
+            line_len += line_len_blue;
+
+            if x == c.width - 1 && y != c.height - 1 {
+                content = content.trim_end().to_string();
+                content.push('\n');
+                line_len = 0;
+            }
+        }
+        if y != c.height - 1  {
+            content = content.trim_end().to_string();
+            content.push('\n');
+            line_len = 0;
+        }
+    }
+    content = content.trim_end().to_string();
+    content.push('\n');
+    content
 }
 
 #[cfg(test)]
@@ -296,3 +438,141 @@ mod vector_operations {
     }
 }
 
+#[cfg(test)]
+mod colors {
+    use super::*;
+
+    #[test]
+    /// Colors are (red, green, blue) tuples
+    fn colors_are_tuples() {
+        let c = color(-0.5, 0.4, 1.7);
+        assert_eq!(c.red, -0.5);
+        assert_eq!(c.green, 0.4);
+        assert_eq!(c.blue, 1.7);
+    }
+
+    #[test]
+    /// Adding colors
+    fn adding_colors() {
+        let c1 = color(0.9, 0.6, 0.75);
+        let c2 = color(0.7, 0.1, 0.25);
+        assert_eq!(c1 + c2, color(1.6, 0.7, 1.0));
+    }
+
+    #[test]
+    /// Subtracting colors
+    fn subtracting_colors() {
+        let c1 = color(0.9, 0.6, 0.75);
+        let c2 = color(0.7, 0.1, 0.25);
+        assert_eq!(c1 - c2, color( 0.2, 0.5, 0.5));
+    }
+
+    #[test]
+    /// Multiplying a color by a scalar
+    fn multiply_color_by_scalar() {
+        let c = color(0.2, 0.3, 0.4);
+        assert_eq!(c * 2.0, color(0.4, 0.6, 0.8));
+    }
+
+    #[test]
+    /// Multiplying a color by a color
+    fn multiply_color_by_color() {
+        let c1 = color(1.0, 0.2, 0.4);
+        let c2 = color(0.9, 1.0, 0.1);
+        assert_eq!(c1 * c2, color(0.9, 0.2, 0.04));
+    }
+}
+
+#[cfg(test)]
+mod canvas {
+    use super::*;
+
+    #[test]
+    /// Creating a canvas
+    fn creating_a_canvas() {
+        let c = Canvas::new(10, 20);
+        assert_eq!(c.width, 10);
+        assert_eq!(c.height, 20);
+        assert!(c.pixels.iter().all(|c| *c == color(0.0,0.0,0.0)));
+    }
+
+    #[test]
+    /// Writing pixels to a canvas
+    fn writing_pixels_to_a_canvas() {
+        let mut c = Canvas::new(10,20);
+        let red = color(1.0,0.0,0.0);
+        c.write_pixel(2,3, red);
+        assert_eq!(c.pixel_at(2,3), red);
+    }
+
+    #[test]
+    /// Constructing the PPM header
+    fn constructing_ppm_header() {
+        let c = Canvas::new(5, 3);
+        let ppm = canvas_to_ppm(c);
+        assert_eq!(ppm, r#"P3
+5 3
+255
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+"#)
+    }
+
+    #[test]
+    /// Constructing the PPM data
+    fn constructing_ppm_data() {
+        let mut c = Canvas::new(5,3);
+        let c1 = color (1.5, 0.0, 0.0);
+        let c2 = color (0.0, 0.5, 0.0);
+        let c3 = color (-0.5, 0.0, 1.0);
+        c.write_pixel(0, 0, c1);
+        c.write_pixel(2, 1, c2);
+        c.write_pixel(4, 2, c3);
+
+        let ppm = canvas_to_ppm(c);
+        assert_eq!(ppm, r#"P3
+5 3
+255
+255 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 128 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 255
+"#)
+    }
+
+    #[test]
+    /// Splitting long lines in PPM files
+    fn splitting_long_lines_in_ppm_files() {
+        let mut c = Canvas::new(10, 2);
+
+        for y in 0..2 {
+            for x in 0..10 {
+                c.write_pixel(x, y, color(1.0, 0.8, 0.6))
+            }
+        }
+
+        let ppm = canvas_to_ppm(c);
+        assert_eq!(ppm, r#"P3
+10 2
+255
+255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204
+153 255 204 153 255 204 153 255 204 153 255 204 153
+255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204
+153 255 204 153 255 204 153 255 204 153 255 204 153
+"#)
+    }
+
+    #[test]
+    /// PPM files are terminated by a newline character
+    fn ppm_files_are_terminated_by_newline_character() {
+        let c = Canvas::new(5,3);
+        let ppm = canvas_to_ppm(c);
+        assert_eq!(ppm, r#"P3
+5 3
+255
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+"#)
+    }
+}

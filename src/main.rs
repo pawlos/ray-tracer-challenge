@@ -1,4 +1,6 @@
-use ray_tracer_challenge::{Point, point, normalize, Vector, vector};
+use std::fs::File;
+use std::io::Write;
+use ray_tracer_challenge::{Point, point, normalize, Vector, vector, Canvas, color, canvas_to_ppm};
 
 struct Environment {
     gravity: Vector,
@@ -18,10 +20,19 @@ fn tick(env: &Environment, proj: Projectile) -> Projectile {
 }
 
 fn main() {
-    let mut p = Projectile { position: point(0f32, 1f32, 0f32), velocity: normalize(vector(1f32,1f32,0f32)) };
-    let e = Environment { gravity: vector(0f32,-0.1f32,0f32), wind: vector(-0.01f32, 0f32,0f32)};
+    let start = point(0.0, 1.0, 0.0);
+    let velocity = normalize(vector(1.0, 1.8, 0.0)) * 11.25;
+    let mut p = Projectile { position: start, velocity };
+
+    let gravity = vector(0.0, -0.1, 0.0);
+    let wind = vector(-0.01, 0.0, 0.0);
+    let e = Environment { gravity, wind };
+    let mut c = Canvas::new(900, 550);
     while p.position.y > 0f32 {
+        c.write_pixel(p.position.x.round() as i32, c.height - p.position.y.round() as i32, color(0.2, 0.4, 0.4));
         p = tick(&e, p);
-        println!("{:?}", p);
     }
+    let mut f = File::create("output.ppm").unwrap();
+    f.write_all(canvas_to_ppm(c).as_bytes()).unwrap();
+    f.sync_all().unwrap();
 }

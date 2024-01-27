@@ -3,12 +3,15 @@ use std::ops::{Add, Sub, Neg, Mul, Div};
 const EPS: f32 = 1e-5;
 
 #[derive(Debug, Copy, Clone)]
-struct Tuple {
-    x: f32,
-    y: f32,
-    z: f32,
+pub struct Tuple {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
     w: f32,
 }
+
+pub type Point = Tuple;
+pub type Vector = Tuple;
 
 impl Add for Tuple {
     type Output = Self;
@@ -58,24 +61,24 @@ impl PartialEq for Tuple {
     }
 }
 
-fn point(x: f32, y: f32, z: f32) -> Tuple {
-    Tuple { x, y, z, w: 1.0 }
+pub fn point(x: f32, y: f32, z: f32) -> Point {
+    Point { x, y, z, w: 1.0 }
 }
 
-fn vector(x: f32, y: f32, z: f32) -> Tuple {
-    Tuple { x, y, z, w: 0.0 }
+pub fn vector(x: f32, y: f32, z: f32) -> Vector {
+    Vector { x, y, z, w: 0.0 }
 }
 
-fn magnitude(v: Tuple) -> f32 {
+pub fn magnitude(v: Vector) -> f32 {
     assert_eq!(v.w, 0.0f32);
 
     (v.x * v.x + v.y * v.y + v.z * v.z).sqrt()
 }
 
-fn normalize(v: Tuple) -> Tuple {
+pub fn normalize(v: Vector) -> Tuple {
     assert_eq!(v.w, 0.0f32);
     let magnitude = magnitude(v);
-    Tuple {
+    Vector {
         x: v.x / magnitude,
         y: v.y / magnitude,
         z: v.z / magnitude,
@@ -83,14 +86,14 @@ fn normalize(v: Tuple) -> Tuple {
     }
 }
 
-fn dot(v1: Tuple, v2: Tuple) -> f32 {
+fn dot(v1: Vector, v2: Vector) -> f32 {
     assert_eq!(v1.w, 0.0f32);
     assert_eq!(v2.w, 0.0f32);
 
     v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w
 }
 
-fn cross(a: Tuple, b: Tuple) -> Tuple {
+fn cross(a: Vector, b: Vector) -> Vector {
     assert_eq!(a.w, 0.0f32);
     assert_eq!(b.w, 0.0f32);
 
@@ -131,14 +134,14 @@ mod tuples {
     /// point() creates a tuple with w=1.0
     fn point_creates_a_tuple_with_w_1() {
         let a = point(4f32, -4f32, 3f32);
-        assert_eq!(a, Tuple { x: 4f32, y: -4f32, z: 3f32, w: 1f32 });
+        assert_eq!(a, Point { x: 4f32, y: -4f32, z: 3f32, w: 1f32 });
     }
 
     #[test]
     /// vector() creates a tuple with w=0.0
     fn vector_creates_a_tuple_with_w_0() {
         let a = vector(4f32, -4f32, 3f32);
-        assert_eq!(a, Tuple { x: 4f32, y: -4f32, z: 3f32, w: 0f32 });
+        assert_eq!(a, Vector { x: 4f32, y: -4f32, z: 3f32, w: 0f32 });
     }
 }
 

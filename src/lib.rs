@@ -315,7 +315,7 @@ fn cross(a: Vector, b: Vector) -> Vector {
            a.x * b.y - a.y * b.x)
 }
 
-fn transpose(a: Matrix) -> Matrix {
+pub fn transpose(a: Matrix) -> Matrix {
     let mut values = [[0.0;4];4];
     for i in 0..a.size {
         for (j, row) in values.iter_mut().enumerate() {
@@ -434,7 +434,7 @@ fn cofactor(a: Matrix, row: usize, col: usize) -> f32 {
     minor(a, row, col) * cofactors.at(row, col)
 }
 
-fn inverse(a: Matrix) -> Matrix {
+pub fn inverse(a: Matrix) -> Matrix {
     assert!(a.clone().is_invertible());
 
     let mut values = [[0.0; 4]; 4];

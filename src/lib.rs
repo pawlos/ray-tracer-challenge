@@ -24,6 +24,13 @@ pub struct Canvas {
     pixels: Vec<Color>,
 }
 
+#[derive(Debug, Clone)]
+pub struct Matrix {
+    size: usize,
+    elems: Vec<f32>,
+}
+
+
 impl Canvas {
     pub fn new(width: i32, height: i32) -> Self {
         Canvas {width , height, pixels: vec![color(0.0,0.0,0.0); (width * height) as usize]}
@@ -37,6 +44,84 @@ impl Canvas {
     pub fn pixel_at(&self, x: i32, y: i32) -> Color {
         let idx = (y*self.width + x) as usize;
         self.pixels[idx]
+    }
+}
+
+impl Matrix {
+    pub fn new2x2(row1: [f32; 2], row2: [f32; 2]) -> Self {
+
+        let mut elems = vec![0.0; row1.len() * row2.len()];
+
+        for (i,e) in row1.iter().enumerate() {
+            elems[i] = *e;
+        }
+
+        for (i,e) in row2.iter().enumerate() {
+            elems[2 + i] = *e;
+        }
+
+        Matrix { elems, size: 2 }
+    }
+
+    pub fn new3x3(
+        row1: [f32; 3],
+        row2: [f32; 3],
+        row3: [f32; 3]) -> Self {
+
+        let mut elems = vec![0.0; row1.len() * row2.len()];
+
+        for (i,e) in row1.iter().enumerate() {
+            elems[i] = *e;
+        }
+
+        for (i,e) in row2.iter().enumerate() {
+            elems[3 + i] = *e;
+        }
+
+        for (i,e) in row3.iter().enumerate() {
+            elems[6 + i] = *e;
+        }
+
+        Matrix { elems, size: 3 }
+    }
+
+    pub fn new4x4(
+        row1: [f32; 4],
+        row2: [f32; 4],
+        row3: [f32; 4],
+        row4: [f32; 4]) -> Self {
+
+        let mut elems = vec![0.0; row1.len() * row2.len()];
+
+        for (i,e) in row1.iter().enumerate() {
+            elems[i] = *e;
+        }
+
+        for (i,e) in row2.iter().enumerate() {
+            elems[4 + i] = *e;
+        }
+
+        for (i,e) in row3.iter().enumerate() {
+            elems[8 + i] = *e;
+        }
+
+        for (i,e) in row4.iter().enumerate() {
+            elems[12 + i] = *e;
+        }
+
+        Matrix { elems, size: 4 }
+    }
+
+    fn is_invertible(&self) -> bool {
+        determinant(self.clone()) != 0.0
+    }
+
+    pub fn at(&self, row: usize, col: usize) -> f32 {
+        self.elems[row * self.size + col]
+    }
+
+    pub fn identity4x4() -> Self {
+        Matrix::new4x4([1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0])
     }
 }
 pub type Point = Tuple;
@@ -106,6 +191,43 @@ impl Mul<Color> for Color {
     }
 }
 
+impl Mul<Matrix> for Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        assert_eq!(self.size, rhs.size);
+        assert_eq!(self.size, 4);
+
+        let mut values = [[0.0; 4]; 4];
+        for (i, row) in values.iter_mut().enumerate() {
+            for (j, val) in row.iter_mut().enumerate() {
+                *val = self.at(i,0) * rhs.at(0, j) +
+                    self.at(i,1) * rhs.at(1, j) +
+                    self.at(i,2) * rhs.at(2, j) +
+                    self.at(i,3) * rhs.at(3, j);
+            }
+        }
+
+        Matrix::new4x4(values[0],values[1], values[2], values[3])
+    }
+}
+
+impl Mul<Tuple> for Matrix {
+    type Output = Tuple;
+    fn mul(self, rhs: Tuple) -> Self::Output {
+        assert_eq!(self.size, 4);
+        let mut values = [0.0; 4];
+        for (i,v) in values.iter_mut().enumerate() {
+            *v = self.at(i, 0) * rhs.x +
+                 self.at(i, 1) * rhs.y +
+                 self.at(i, 2) * rhs.z +
+                 self.at(i, 3) * rhs.w;
+        }
+
+        Tuple { x: values[0], y: values[1], z: values[2], w: values[3] }
+    }
+}
+
 impl Div<f32> for Tuple {
     type Output = Self;
 
@@ -129,6 +251,25 @@ impl PartialEq for Color {
             self.blue.sub(rhs.blue).abs() < EPS
     }
 }
+
+impl PartialEq for Matrix {
+    fn eq(&self, other: &Self) -> bool {
+        if self.size != other.size {
+            return false;
+        }
+        else {
+            for i in 0..self.size {
+                for j in 0 .. self.size  {
+                    if self.at(i,j) != other.at(i,j) {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+}
+
 pub fn point(x: f32, y: f32, z: f32) -> Point {
     Point { x, y, z, w: 1.0 }
 }
@@ -172,6 +313,125 @@ fn cross(a: Vector, b: Vector) -> Vector {
     vector(a.y * b.z - a.z * b.y,
            a.z * b.x - a.x * b.z,
            a.x * b.y - a.y * b.x)
+}
+
+fn transpose(a: Matrix) -> Matrix {
+    let mut values = [[0.0;4];4];
+    for i in 0..a.size {
+        for (j, row) in values.iter_mut().enumerate() {
+            (*row)[i] = a.at(i, j);
+        }
+    }
+
+    Matrix::new4x4(
+        values[0],
+        values[1],
+        values[2],
+        values[3]
+    )
+}
+
+fn determinant2x2(a: Matrix) -> f32 {
+    assert_eq!(a.size, 2);
+
+    a.at(0,0)*a.at(1,1) - a.at(0, 1) * a.at(1, 0)
+}
+
+fn determinant(a: Matrix) -> f32 {
+    if a.size == 2 {
+        return determinant2x2(a);
+    }
+    //assert_eq!(a.size, 3);
+    let mut det = 0.0;
+    for i in 0..a.size {
+        det += a.at(0,i) * cofactor(a.clone(), 0, i);
+    }
+    det
+}
+
+fn submatrix2x2(a: Matrix, skip_row: usize, skip_col: usize) -> Matrix {
+    assert_eq!(a.size, 3);
+    let mut values = [[0.0; 2]; 2];
+
+    let mut i_idx = 0;
+    let mut j_idx;
+    for i in 0 .. 3 {
+        j_idx = 0;
+        if i == skip_row {
+            continue;
+        }
+        for j in 0 .. a.size {
+            if j == skip_col
+            {
+                continue;
+            }
+            values[i_idx][j_idx] = a.at(i, j);
+            j_idx += 1;
+        }
+        i_idx += 1;
+    }
+
+    Matrix::new2x2(values[0], values[1])
+}
+
+fn submatrix3x3(a: Matrix, skip_row: usize, skip_col: usize) -> Matrix {
+    assert_eq!(a.size, 4);
+    let mut values = [[0.0; 3]; 3];
+
+    let mut i_idx = 0;
+    let mut j_idx;
+    for i in 0 .. 4 {
+        j_idx = 0;
+        if i == skip_row {
+            continue;
+        }
+        for j in 0 .. a.size {
+            if j == skip_col
+            {
+                continue;
+            }
+            values[i_idx][j_idx] = a.at(i, j);
+            j_idx += 1;
+        }
+        i_idx += 1;
+    }
+
+    Matrix::new3x3(values[0], values[1], values[2])
+}
+
+fn submatrix(a: Matrix, start_row: usize, start_col: usize) -> Matrix {
+    match a.size - 1 {
+        3 => submatrix3x3(a, start_row, start_col),
+        2 => submatrix2x2(a, start_row, start_col),
+        _ => panic!("Unsupported size")
+    }
+}
+
+fn minor(a: Matrix, row: usize, col: usize) -> f32 {
+    determinant(submatrix(a, row, col))
+}
+
+fn cofactor3x3(a: Matrix, row: usize, col: usize) -> f32 {
+    assert_eq!(a.size, 3);
+    let cofactors = Matrix::new3x3([1.0, -1.0, 1.0],
+    [-1.0, 1.0, -1.0],
+    [1.0, -1.0, 1.0]);
+
+    minor(a, row, col) * cofactors.at(row, col)
+}
+
+fn cofactor(a: Matrix, row: usize, col: usize) -> f32 {
+    if a.size == 3 {
+        return cofactor3x3(a, row, col);
+    }
+
+    assert_eq!(a.size, 4);
+    let cofactors = Matrix::new4x4([1.0, -1.0, 1.0, -1.0],
+                                   [-1.0, 1.0, -1.0, 1.0],
+                                   [1.0, -1.0, 1.0, -1.0],
+                                   [-1.0, 1.0, -1.0, 1.0]);
+
+    minor(a, row, col) * cofactors.at(row, col)
 }
 
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
@@ -574,5 +834,287 @@ mod canvas {
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 "#)
+    }
+}
+
+#[cfg(test)]
+mod matrix {
+    use super::*;
+
+    #[test]
+    /// Constructing and inspecting a 4x4 matrix
+    fn constructing_and_inspecting_4x4_matrix() {
+        let m = Matrix::new4x4(
+            [1.0, 2.0, 3.0, 4.0],
+            [5.5, 6.5, 7.5, 8.5],
+            [9.0, 10.0, 11.0, 12.0],
+            [13.5, 14.5, 15.5, 16.5]);
+
+        assert_eq!(m.at(0, 0), 1.0);
+        assert_eq!(m.at(0, 3), 4.0);
+        assert_eq!(m.at(1, 0), 5.5);
+        assert_eq!(m.at(1, 2), 7.5);
+        assert_eq!(m.at(2, 2), 11.0);
+        assert_eq!(m.at(3, 0), 13.5);
+        assert_eq!(m.at(3, 2), 15.5);
+    }
+
+    #[test]
+    /// A 2x2 matrix ought to be representable
+    fn matrix_2x2_ought_to_be_representable() {
+        let m = Matrix::new2x2([-3.0, 5.0],[1.0, -2.0]);
+
+        assert_eq!(m.at(0, 0), -3.0);
+        assert_eq!(m.at(0, 1), 5.0);
+        assert_eq!(m.at(1, 0), 1.0);
+        assert_eq!(m.at(1, 1), -2.0);
+    }
+
+    #[test]
+    /// A 3x3 matrix ought to be representable
+    fn matrix_3x3_ought_to_be_representable() {
+        let m = Matrix::new3x3(
+            [-3.0, 5.0, 0.0],
+            [1.0, -2.0, -7.0],
+            [0.0, 1.0, 1.0]);
+
+        assert_eq!(m.at(0, 0), -3.0);
+        assert_eq!(m.at(1, 1), -2.0);
+        assert_eq!(m.at(2, 2), 1.0);
+    }
+
+    #[test]
+    /// Matrix equality with identical matrices
+    fn matrix_equality_with_identical_matrices() {
+        let a = Matrix::new4x4(
+          [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 8.0, 7.0, 6.0],
+            [5.0, 4.0, 3.0, 2.0],
+        );
+        let b = Matrix::new4x4(
+          [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 8.0, 7.0, 6.0],
+            [5.0, 4.0, 3.0, 2.0],
+        );
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    /// Matrix equality with different matrices
+    fn matrix_equality_with_different_matrices() {
+        let a = Matrix::new4x4(
+          [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 8.0, 7.0, 6.0],
+            [5.0, 4.0, 3.0, 2.0]
+        );
+        let b = Matrix::new4x4(
+            [2.0, 3.0, 4.0, 5.0],
+            [6.0, 7.0, 8.0, 9.0],
+            [8.0, 7.0, 6.0, 5.0],
+            [4.0, 3.0, 2.0, 1.0]
+        );
+        assert_ne!(a,b);
+    }
+
+    #[test]
+    /// Multiplying two matrices
+    fn multiplying_two_matrices() {
+        let a = Matrix::new4x4(
+        [1.0, 2.0, 3.0, 4.0],
+        [5.0, 6.0, 7.0, 8.0],
+        [9.0, 8.0, 7.0, 6.0],
+        [5.0, 4.0, 3.0, 2.0]);
+        let b = Matrix::new4x4(
+        [-2.0, 1.0, 2.0, 3.0],
+        [3.0, 2.0, 1.0, -1.0],
+        [4.0, 3.0, 6.0, 5.0],
+        [1.0, 2.0, 7.0, 8.0]
+        );
+
+        assert_eq!(a * b, Matrix::new4x4(
+        [20.0, 22.0, 50.0, 48.0],
+        [44.0, 54.0, 114.0, 108.0],
+        [40.0, 58.0, 110.0, 102.0],
+        [16.0, 26.0, 46.0, 42.0]
+        ))
+    }
+
+    #[test]
+    /// A matrix multiplied by a tuple
+    fn matrix_multiplied_by_a_tuple() {
+        let a = Matrix::new4x4(
+            [1.0, 2.0, 3.0, 4.0],
+            [2.0, 4.0, 4.0, 2.0],
+            [8.0, 6.0, 4.0, 1.0],
+            [0.0, 0.0, 0.0, 1.0]
+        );
+        let b = Tuple { x: 1.0, y: 2.0, z: 3.0, w: 1.0 };
+        assert_eq!(a * b, Tuple { x: 18.0, y: 24.0, z: 33.0, w: 1.0});
+    }
+
+    #[test]
+    /// Multiplying a matrix by the identity matrix
+    fn matrix_multiplied_by_identity_matrix() {
+        let a = Matrix::new4x4(
+          [0.0, 1.0, 2.0, 4.0],
+            [1.0, 2.0, 4.0, 8.0],
+            [2.0, 4.0, 8.0, 16.0],
+            [4.0, 8.0, 16.0, 32.0]
+        );
+        assert_eq!(a.clone() * Matrix::identity4x4(), a);
+    }
+
+    #[test]
+    /// Multiplying the identity matrix by a tuple
+    fn multiplying_identity_matrix_by_a_tuple() {
+        let a = Tuple {x: 1.0, y: 2.0, z: 3.0, w: 4.0};
+        assert_eq!(Matrix::identity4x4() * a, a);
+    }
+
+    #[test]
+    /// Transposing a matrix
+    fn transposing_a_matrix() {
+        let a = Matrix::new4x4(
+            [0.0, 9.0, 3.0, 0.0],
+            [9.0, 8.0, 0.0, 8.0],
+            [1.0, 8.0, 5.0, 3.0],
+            [0.0, 0.0, 5.0, 8.0]
+        );
+
+        assert_eq!(transpose(a), Matrix::new4x4(
+            [0.0, 9.0, 1.0, 0.0],
+            [9.0, 8.0, 8.0, 0.0],
+            [3.0, 0.0, 5.0, 5.0],
+            [0.0, 8.0, 3.0, 8.0]
+        ))
+    }
+
+    #[test]
+    /// Transposing the identity matrix
+    fn transposing_the_identity_matrix() {
+        let identity = Matrix::identity4x4();
+        assert_eq!(transpose(identity.clone()), identity);
+    }
+
+    #[test]
+    /// Calculating the determinant of a 2x2 matrix
+    fn calculating_the_determinant_of_2x2_matrix() {
+        let a = Matrix::new2x2(
+            [1.0, 5.0],
+        [-3.0, 2.0]);
+
+        assert_eq!(determinant(a), 17.0);
+    }
+
+    #[test]
+    /// A submatrix of a 3x3 matrix is a 2x2 matrix
+    fn submatrix_of_3x3_matrix_is_2x2_matrix() {
+        let a = Matrix::new3x3(
+            [1.0, 5.0, 0.0],
+        [-3.0, 2.0, 7.0],
+        [0.0, 6.0, -3.0]);
+
+        assert_eq!(submatrix(a, 0, 2), Matrix::new2x2([-3.0, 2.0],[0.0, 6.0]))
+    }
+
+    #[test]
+    /// A submatrix of a 4x4 matrix is a 3x3 matrix
+    fn submatrix_of_4x4_matrix_is_3x3_matrix() {
+        let a = Matrix::new4x4(
+            [-6.0, 1.0, 1.0, 6.0],
+            [-8.0, 5.0, 8.0, 6.0],
+            [-1.0, 0.0, 8.0, 2.0],
+            [-7.0, 1.0, -1.0, 1.0]);
+
+        assert_eq!(submatrix(a, 2, 1), Matrix::new3x3(
+            [-6.0, 1.0, 6.0],
+            [-8.0, 8.0, 6.0],
+            [-7.0, -1.0, 1.0]
+        ));
+    }
+
+    #[test]
+    /// Calculating a minor of a 3x3 matrix
+    fn calculating_a_minor_of_3x3_matrix() {
+        let a = Matrix::new3x3(
+            [3.0, 5.0, 0.0],
+        [2.0, -1.0, -7.0],
+        [6.0, -1.0, 5.0]);
+        let b = submatrix(a.clone(), 1, 0);
+        assert_eq!(determinant(b), 25.0);
+        assert_eq!(minor(a.clone(), 1, 0), 25.0);
+    }
+
+    #[test]
+    /// Calculating cofactor of a 3x3 matrix
+    fn calculating_cofactor_of_a_3x3_matrix() {
+        let a = Matrix::new3x3(
+            [3.0, 5.0, 0.0],
+        [2.0, -1.0, -7.0],
+        [6.0, -1.0, 5.0]);
+
+        assert_eq!(minor(a.clone(), 0, 0), -12.0);
+        assert_eq!(cofactor(a.clone(), 0, 0), -12.0);
+        assert_eq!(minor(a.clone(), 1, 0), 25.0);
+        assert_eq!(cofactor(a.clone(), 1, 0), -25.0)
+    }
+
+    #[test]
+    /// Calculating the determinant of 3x3 matrix
+    fn calculating_the_determinant_of_3x3_matrix() {
+        let a = Matrix::new3x3(
+            [1.0, 2.0, 6.0],
+        [-5.0, 8.0, -4.0],
+        [2.0, 6.0, 4.0]);
+
+        assert_eq!(cofactor(a.clone(), 0,0), 56.0);
+        assert_eq!(cofactor(a.clone(), 0,1), 12.0);
+        assert_eq!(cofactor(a.clone(),0,2), -46.0);
+        assert_eq!(determinant(a.clone()), -196.0);
+    }
+
+    #[test]
+    /// Calculating the determinant of 4x4 matrix
+    fn calculating_the_determinant_of_4x4_matrix() {
+        let a = Matrix::new4x4(
+            [-2.0, -8.0, 3.0, 5.0],
+        [-3.0, 1.0, 7.0, 3.0],
+        [1.0, 2.0, -9.0, 6.0],
+        [-6.0, 7.0, 7.0, -9.0]);
+
+        assert_eq!(cofactor(a.clone(), 0,0), 690.0);
+        assert_eq!(cofactor(a.clone(), 0,1), 447.0);
+        assert_eq!(cofactor(a.clone(), 0,2), 210.0);
+        assert_eq!(cofactor(a.clone(), 0,3), 51.0);
+        assert_eq!(determinant(a.clone()), -4071.0);
+    }
+
+    #[test]
+    /// Testing an invertible matrix for invertibility
+    fn testing_an_invertible_matrix_for_invertibility() {
+        let a = Matrix::new4x4(
+            [6.0, 4.0, 4.0, 4.0],
+            [5.0, 5.0, 7.0, 6.0],
+            [4.0, -9.0, 3.0, -7.0],
+            [9.0, 1.0, 7.0, -6.0]);
+
+        assert_eq!(determinant(a.clone()), -2120.0);
+        assert!(a.is_invertible());
+    }
+
+    #[test]
+    /// Testing a noninvertible matrix for invertibility
+    fn testing_a_noninvertible_matrix_for_invertibility() {
+        let a = Matrix::new4x4(
+            [-4.0, 2.0, -2.0, -3.0],
+            [0.0, 6.0, 2.0, 6.0],
+            [0.0, -5.0, 1.0, -5.0],
+            [0.0, 0.0, 0.0, 0.0]);
+
+        assert_eq!(determinant(a.clone()), 0.0);
+        assert!(!a.is_invertible());
     }
 }

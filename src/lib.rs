@@ -465,6 +465,30 @@ fn scaling(sx: f32, sy: f32, sz: f32) -> Matrix {
     [0.0, 0.0, 0.0, 1.0])
 }
 
+fn rotation_x(r: f32) -> Matrix {
+    Matrix::new4x4(
+        [1.0, 0.0, 0.0, 0.0],
+    [0.0, r.cos(), -r.sin(), 0.0],
+    [0.0, r.sin(), r.cos(), 0.0],
+    [0.0, 0.0, 0.0, 1.0])
+}
+
+fn rotation_y(r: f32) -> Matrix {
+    Matrix::new4x4(
+        [r.cos(), 0.0, r.sin(), 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [-r.sin(), 0.0, r.cos(), 0.0],
+        [0.0, 0.0, 0.0, 1.0])
+}
+
+fn rotation_z(r: f32) -> Matrix {
+    Matrix::new4x4(
+        [r.cos(), -r.sin(), 0.0, 0.0],
+        [r.sin(), r.cos(), 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0])
+}
+
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
     let c = c.mul(255.0).clamp(0.0, 255.0);
     let c_str = format!("{} ", c.round());
@@ -1226,6 +1250,7 @@ mod matrix {
 
 #[cfg(test)]
 mod transformation {
+    use std::f32::consts::PI;
     use super::*;
 
     #[test]
@@ -1288,5 +1313,38 @@ mod transformation {
         let p = point(2.0, 3.0, 4.0);
 
         assert_eq!(transform * p, point(-2.0, 3.0, 4.0))
+    }
+
+    #[test]
+    /// Rotating a point around the x-axis
+    fn rotating_a_point_around_the_x_axis() {
+        let p = point(0.0, 1.0, 0.0);
+        let half_quarter = rotation_x(PI / 4.0);
+        let full_quarter = rotation_x(PI / 2.0);
+
+        assert_eq!(half_quarter * p, point( 0.0, 2.0f32.sqrt() / 2.0, 2.0f32.sqrt() / 2.0));
+        assert_eq!(full_quarter * p, point( 0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    /// Rotating a point around the y-axis
+    fn rotating_a_point_around_y_axis() {
+        let p = point(0.0, 0.0, 1.0);
+        let half_quarter = rotation_y(PI / 4.0);
+        let full_quarter = rotation_y(PI / 2.0);
+
+        assert_eq!(half_quarter * p, point(2.0f32.sqrt() / 2.0, 0.0, 2.0f32.sqrt() / 2.0));
+        assert_eq!(full_quarter * p, point(1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    /// Rotating a point around the z aix
+    fn rotation_a_point_around_z_axis() {
+        let p = point(0.0, 1.0, 0.0);
+        let half_quarter = rotation_z(PI / 4.0);
+        let full_quarter = rotation_z(PI / 2.0);
+
+        assert_eq!(half_quarter * p, point(-(2.0f32.sqrt() / 2.0), 2.0f32.sqrt() / 2.0, 0.0));
+        assert_eq!(full_quarter * p, point(-1.0, 0.0, 0.0));
     }
 }

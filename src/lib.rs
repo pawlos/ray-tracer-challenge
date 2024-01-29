@@ -451,6 +451,20 @@ pub fn inverse(a: Matrix) -> Matrix {
     Matrix::new4x4(values[0], values[1], values[2], values[3])
 }
 
+fn translation(tx: f32, ty: f32, tz: f32) -> Matrix {
+    Matrix::new4x4([1.0, 0.0, 0.0, tx],
+    [0.0, 1.0, 0.0, ty],
+    [0.0, 0.0, 1.0, tz],
+    [0.0, 0.0, 0.0, 1.0])
+}
+
+fn scaling(sx: f32, sy: f32, sz: f32) -> Matrix {
+    Matrix::new4x4([sx, 0.0, 0.0, 0.0],
+    [0.0, sy, 0.0, 0.0],
+    [0.0, 0.0, sz, 0.0],
+    [0.0, 0.0, 0.0, 1.0])
+}
+
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
     let c = c.mul(255.0).clamp(0.0, 255.0);
     let c_str = format!("{} ", c.round());
@@ -1207,5 +1221,72 @@ mod matrix {
         let c = a.clone() * b.clone();
 
         assert_eq!(c * inverse(b), a);
+    }
+}
+
+#[cfg(test)]
+mod transformation {
+    use super::*;
+
+    #[test]
+    /// Multiplying by translation matrix
+    fn multiplying_by_translation_matrix() {
+        let transform = translation(5.0, -3.0, 2.0);
+        let p = point(-3.0, 4.0, 5.0);
+
+        assert_eq!(transform * p, point(2.0, 1.0, 7.0))
+    }
+
+    #[test]
+    /// Multiplying by the inverse of a translation matrix
+    fn multiplying_by_the_inverse_of_a_translation_matrix() {
+        let transform = translation(5.0, -3.0, 2.0);
+        let inv = inverse(transform);
+        let p = point(-3.0, 4.0, 5.0);
+
+        assert_eq!(inv * p, point(-8.0, 7.0, 3.0))
+    }
+
+    #[test]
+    /// Translation does not affect vectors
+    fn translation_does_not_affect_vectors() {
+        let transform = translation(5.0, -3.0, 2.0);
+        let v = vector(-3.0, 4.0, 5.0);
+        assert_eq!(transform * v, v);
+    }
+
+    #[test]
+    /// A scaling matrix applied to a point
+    fn scaling_matrix_applied_to_a_point() {
+        let transform = scaling(2.0, 3.0, 4.0);
+        let p = point(-4.0, 6.0, 8.0);
+        assert_eq!(transform * p, point(-8.0, 18.0, 32.0));
+    }
+
+    #[test]
+    /// A scaling matrix applied to a vector
+    fn scaling_matrix_applied_to_a_vector() {
+        let transform = scaling(2.0, 3.0, 4.0);
+        let v = vector(-4.0, 6.0, 8.0);
+        assert_eq!(transform * v, vector(-8.0, 18.0, 32.0));
+    }
+
+    #[test]
+    /// Multiplying by the inverse of a scaling matrix
+    fn multiplying_by_the_inverse_of_a_scaling_matrix() {
+        let transform = scaling(2.0, 3.0, 4.0);
+        let inv = inverse(transform);
+        let v = vector(-4.0, 6.0, 8.0);
+
+        assert_eq!(inv * v, vector(-2.0, 2.0, 2.0))
+    }
+
+    #[test]
+    /// Reflection is scaling by a negative value
+    fn reflection_is_scaling_by_a_negative_value() {
+        let transform = scaling(-1.0, 1.0, 1.0);
+        let p = point(2.0, 3.0, 4.0);
+
+        assert_eq!(transform * p, point(-2.0, 3.0, 4.0))
     }
 }

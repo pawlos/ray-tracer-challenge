@@ -489,6 +489,14 @@ fn rotation_z(r: f32) -> Matrix {
         [0.0, 0.0, 0.0, 1.0])
 }
 
+fn shearing(sxy: f32, sxz: f32, syx: f32, syz: f32, szx: f32, szy: f32) -> Matrix {
+    Matrix::new4x4(
+        [1.0, sxy, sxz, 0.0],
+        [syx, 1.0, syz, 0.0],
+        [szx, szy, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0])
+}
+
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
     let c = c.mul(255.0).clamp(0.0, 255.0);
     let c_str = format!("{} ", c.round());
@@ -1346,5 +1354,62 @@ mod transformation {
 
         assert_eq!(half_quarter * p, point(-(2.0f32.sqrt() / 2.0), 2.0f32.sqrt() / 2.0, 0.0));
         assert_eq!(full_quarter * p, point(-1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    ///A shearing transformation moves x in proportion to y
+    fn shearing_transformation_moves_x_in_proportion_to_y() {
+        let transform = shearing(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let p = point(2.0, 3.0, 4.0);
+
+        assert_eq!(transform * p, point(5.0, 3.0, 4.0));
+    }
+
+    #[test]
+    /// A shearing transformation moves x in proportion to z
+    fn shearing_transformation_moves_x_in_proportion_to_z()
+    {
+        let transform = shearing(0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
+        let p = point(2.0, 3.0, 4.0);
+
+        assert_eq!(transform * p, point(6.0, 3.0, 4.0));
+    }
+
+    #[test]
+    ///A shearing transformation moves y in proportion to x
+    fn shearing_transformation_moves_y_in_proportion_to_x() {
+        let transform = shearing(0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+        let p = point(2.0, 3.0, 4.0);
+
+        assert_eq!(transform * p, point(2.0, 5.0, 4.0));
+    }
+
+    #[test]
+    /// A shearing transformation moves y in proportion to z
+    fn shearing_transformation_moves_y_in_proportion_to_z()
+    {
+        let transform = shearing(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        let p = point(2.0, 3.0, 4.0);
+
+        assert_eq!(transform * p, point(2.0, 7.0, 4.0));
+    }
+
+    #[test]
+    ///A shearing transformation moves z in proportion to x
+    fn shearing_transformation_moves_z_in_proportion_to_x() {
+        let transform = shearing(0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+        let p = point(2.0, 3.0, 4.0);
+
+        assert_eq!(transform * p, point(2.0, 3.0, 6.0));
+    }
+
+    #[test]
+    /// A shearing transformation moves z in proportion to y
+    fn shearing_transformation_moves_z_in_proportion_to_y()
+    {
+        let transform = shearing(0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+        let p = point(2.0, 3.0, 4.0);
+
+        assert_eq!(transform * p, point(2.0, 3.0, 7.0));
     }
 }

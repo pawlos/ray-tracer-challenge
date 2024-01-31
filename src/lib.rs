@@ -451,21 +451,21 @@ pub fn inverse(a: Matrix) -> Matrix {
     Matrix::new4x4(values[0], values[1], values[2], values[3])
 }
 
-fn translation(tx: f32, ty: f32, tz: f32) -> Matrix {
+pub fn translation(tx: f32, ty: f32, tz: f32) -> Matrix {
     Matrix::new4x4([1.0, 0.0, 0.0, tx],
     [0.0, 1.0, 0.0, ty],
     [0.0, 0.0, 1.0, tz],
     [0.0, 0.0, 0.0, 1.0])
 }
 
-fn scaling(sx: f32, sy: f32, sz: f32) -> Matrix {
+pub fn scaling(sx: f32, sy: f32, sz: f32) -> Matrix {
     Matrix::new4x4([sx, 0.0, 0.0, 0.0],
     [0.0, sy, 0.0, 0.0],
     [0.0, 0.0, sz, 0.0],
     [0.0, 0.0, 0.0, 1.0])
 }
 
-fn rotation_x(r: f32) -> Matrix {
+pub fn rotation_x(r: f32) -> Matrix {
     Matrix::new4x4(
         [1.0, 0.0, 0.0, 0.0],
     [0.0, r.cos(), -r.sin(), 0.0],
@@ -473,7 +473,7 @@ fn rotation_x(r: f32) -> Matrix {
     [0.0, 0.0, 0.0, 1.0])
 }
 
-fn rotation_y(r: f32) -> Matrix {
+pub fn rotation_y(r: f32) -> Matrix {
     Matrix::new4x4(
         [r.cos(), 0.0, r.sin(), 0.0],
         [0.0, 1.0, 0.0, 0.0],
@@ -481,7 +481,7 @@ fn rotation_y(r: f32) -> Matrix {
         [0.0, 0.0, 0.0, 1.0])
 }
 
-fn rotation_z(r: f32) -> Matrix {
+pub fn rotation_z(r: f32) -> Matrix {
     Matrix::new4x4(
         [r.cos(), -r.sin(), 0.0, 0.0],
         [r.sin(), r.cos(), 0.0, 0.0],

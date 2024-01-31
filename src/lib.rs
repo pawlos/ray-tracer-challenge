@@ -1412,4 +1412,35 @@ mod transformation {
 
         assert_eq!(transform * p, point(2.0, 3.0, 7.0));
     }
+
+    #[test]
+    /// Invidual transformations are applied in sequence
+    fn individual_transformations_are_applied_in_sequence() {
+        let p = point(1.0, 0.0, 1.0);
+        let a = rotation_x(PI /2.0);
+        let b = scaling(5.0, 5.0, 5.0);
+        let c = translation(10.0, 5.0, 7.0);
+
+        let p2 = a * p;
+        assert_eq!(p2, point(1.0, -1.0, 0.0));
+
+        let p3 = b * p2;
+        assert_eq!(p3, point(5.0, -5.0, 0.0));
+
+        let p4 = c * p3;
+        assert_eq!(p4, point(15.0, 0.0, 7.0));
+    }
+
+    #[test]
+    /// Chained transformations must be applied in reverse order
+    fn chained_transformations_must_be_applied_in_reverse_order() {
+        let p = point(1.0, 0.0, 1.0);
+        let a = rotation_x(PI /2.0);
+        let b = scaling(5.0, 5.0, 5.0);
+        let c = translation(10.0, 5.0, 7.0);
+
+        let t = c * b * a;
+
+        assert_eq!(t * p, point(15.0, 0.0, 7.0));
+    }
 }

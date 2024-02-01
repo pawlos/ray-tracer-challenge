@@ -30,6 +30,14 @@ pub struct Matrix {
     elems: Vec<f32>,
 }
 
+#[derive(Copy, Clone)]
+struct Ray {
+    origin: Point,
+    direction: Vector
+}
+
+struct Sphere;
+
 
 impl Canvas {
     pub fn new(width: i32, height: i32) -> Self {
@@ -495,6 +503,37 @@ fn shearing(sxy: f32, sxz: f32, syx: f32, syz: f32, szx: f32, szy: f32) -> Matri
         [syx, 1.0, syz, 0.0],
         [szx, szy, 1.0, 0.0],
         [0.0, 0.0, 0.0, 1.0])
+}
+
+fn ray(origin: Point, direction: Vector) -> Ray {
+    Ray { origin, direction }
+}
+
+fn position(ray: Ray, t: f32) -> Point {
+    ray.origin + ray.direction * t
+}
+
+fn sphere() -> Sphere {
+    Sphere
+}
+
+fn intersects(s: Sphere, r: Ray) -> Vec<f32> {
+    let sphere_to_ray = r.origin - point(0.0, 0.0, 0.0);
+
+    let a = dot(r.direction, r.direction);
+    let b = 2.0 * dot(r.direction, sphere_to_ray);
+    let c = dot(sphere_to_ray, sphere_to_ray) - 1.0;
+
+    let discriminant = b*b - 4.0*a*c;
+
+    if discriminant < 0.0 {
+        return [].to_vec();
+    }
+
+    let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
+    let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
+
+    [t1, t2].to_vec()
 }
 
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
@@ -1442,5 +1481,98 @@ mod transformation {
         let t = c * b * a;
 
         assert_eq!(t * p, point(15.0, 0.0, 7.0));
+    }
+}
+
+#[cfg(test)]
+mod rays {
+    use super::*;
+
+    #[test]
+    /// Creating and querying a ray
+    fn creating_and_querying_a_ray() {
+        let origin = point(1.0, 2.0, 3.0);
+        let direction = vector(4.0, 5.0, 6.0);
+
+        let r = ray(origin, direction);
+
+        assert_eq!(r.origin, origin);
+        assert_eq!(r.direction, direction);
+    }
+
+    #[test]
+    /// Computing a point from a distance
+    fn computring_a_point_from_a_distance() {
+        let r = ray(point(2.0, 3.0, 4.0), vector(1.0, 0.0, 0.0));
+
+        assert_eq!(position(r, 0.0), point(2.0, 3.0, 4.0));
+        assert_eq!(position(r, 1.0), point(3.0, 3.0, 4.0));
+        assert_eq!(position(r, -1.0), point(1.0, 3.0, 4.0));
+        assert_eq!(position(r, 2.5), point(4.5, 3.0, 4.0));
+    }
+}
+
+#[cfg(test)]
+mod spheres {
+    use super::*;
+
+    #[test]
+    /// A ray intersects a sphere at two points
+    fn a_ray_intersects_a_sphere_at_two_points() {
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let s = sphere();
+
+        let xs = intersects(s, r);
+
+        assert_eq!(xs.len(), 2);
+        assert_eq!(xs[0], 4.0);
+        assert_eq!(xs[1], 6.0);
+    }
+
+    #[test]
+    /// A ray intersects a sphere at a tangent
+    fn a_ray_intersects_a_sphere_at_a_tangent() {
+        let r = ray(point(0.0, 1.0, -5.0), vector(0.0, 0.0, 1.0));
+        let s = sphere();
+
+        let xs = intersects(s, r);
+        assert_eq!(xs.len(), 2);
+        assert_eq!(xs[0], 5.0);
+        assert_eq!(xs[1], 5.0);
+    }
+
+    #[test]
+    /// A ray misses a sphere
+    fn a_ray_misses_a_sphere() {
+        let r = ray(point(0.0, 2.0, -5.0), vector(0.0, 0.0, 1.0));
+        let s = sphere();
+
+        let xs = intersects(s, r);
+        assert_eq!(xs.len(), 0);
+    }
+
+    #[test]
+    /// A ray originates inside a sphere
+    fn a_ray_originates_inside_a_sphere() {
+        let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 0.0, 1.0));
+        let s = sphere();
+
+        let xs = intersects(s, r);
+        assert_eq!(xs.len(), 2);
+        assert_eq!(xs[0], -1.0);
+        assert_eq!(xs[1], 1.0);
+    }
+
+    #[test]
+    /// A sphere is behind a ray
+    fn a_sphere_is_behind_a_ray() {
+        let r = ray(point(0.0, 0.0, 5.0), vector(0.0, 0.0, 1.0));
+        let s = sphere();
+
+        let xs = intersects(s, r);
+
+        assert_eq!(xs.len(), 2);
+        assert_eq!(xs[0], -6.0);
+        assert_eq!(xs[1], -4.0);
     }
 }

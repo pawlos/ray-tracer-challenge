@@ -36,8 +36,13 @@ struct Ray {
     direction: Vector
 }
 
+#[derive(PartialEq, Debug)]
 struct Sphere;
 
+struct Intersection<'a> {
+    t: f32,
+    object: &'a Sphere, //for now only Sphere
+}
 
 impl Canvas {
     pub fn new(width: i32, height: i32) -> Self {
@@ -515,6 +520,10 @@ fn position(ray: Ray, t: f32) -> Point {
 
 fn sphere() -> Sphere {
     Sphere
+}
+
+fn intersection(t:f32, object: &Sphere) -> Intersection {
+    Intersection { t, object }
 }
 
 fn intersects(s: Sphere, r: Ray) -> Vec<f32> {
@@ -1453,7 +1462,7 @@ mod transformation {
     }
 
     #[test]
-    /// Invidual transformations are applied in sequence
+    /// Individual transformations are applied in sequence
     fn individual_transformations_are_applied_in_sequence() {
         let p = point(1.0, 0.0, 1.0);
         let a = rotation_x(PI /2.0);
@@ -1502,7 +1511,7 @@ mod rays {
 
     #[test]
     /// Computing a point from a distance
-    fn computring_a_point_from_a_distance() {
+    fn computing_a_point_from_a_distance() {
         let r = ray(point(2.0, 3.0, 4.0), vector(1.0, 0.0, 0.0));
 
         assert_eq!(position(r, 0.0), point(2.0, 3.0, 4.0));
@@ -1574,5 +1583,35 @@ mod spheres {
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0], -6.0);
         assert_eq!(xs[1], -4.0);
+    }
+}
+
+#[cfg(test)]
+mod intersection {
+    use super::*;
+
+    #[test]
+    /// An intersection encapsulates t and object
+    fn an_intersection_encapsulates_t_and_object() {
+        let s = sphere();
+        let i = intersection(3.5, &s);
+
+        assert_eq!(i.t, 3.5);
+        assert_eq!(*i.object, s);
+    }
+
+    #[test]
+    /// Aggregating intersections
+    fn aggregating_intersections() {
+        let s = sphere();
+        let i1 = intersection(1.0, &s);
+        let i2 = intersection(2.0, &s);
+
+        let xs = [i1, i2];
+
+        assert_eq!(xs.len(), 2);
+        assert_eq!(xs[0].t, 1.0);
+        assert_eq!(xs[1].t, 2.0);
+
     }
 }

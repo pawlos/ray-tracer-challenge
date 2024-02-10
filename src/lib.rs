@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::vec;
 
-pub const EPS: f32 = 1e-5;
+pub const EPS: f32 = 1e-4;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Tuple {
@@ -40,12 +40,27 @@ pub struct Ray {
 pub struct Sphere {
     id: uuid::Uuid,
     pub transform: Matrix,
+    pub material: Material,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Intersection<'a> {
     pub t: f32,
     pub object: &'a Sphere, //for now only Sphere
+}
+
+pub struct PointLight {
+    pub position: Point,
+    pub intensity: Color,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Material {
+    pub color: Color,
+    pub ambient: f32,
+    pub diffuse: f32,
+    pub specular: f32,
+    pub shininess: f32
 }
 
 impl Canvas {
@@ -528,7 +543,7 @@ pub fn position(ray: Ray, t: f32) -> Point {
 }
 
 pub fn sphere() -> Sphere {
-    Sphere { id: uuid::Uuid::new_v4(), transform: Matrix::identity4x4() }
+    Sphere { id: uuid::Uuid::new_v4(), transform: Matrix::identity4x4(), material: material() }
 }
 
 pub fn intersection(t:f32, object: &Sphere) -> Intersection {
@@ -573,7 +588,7 @@ pub fn set_transform(s: &mut Sphere, t: Matrix) {
     s.transform = t;
 }
 
-pub fn normal_at(s: Sphere, p: Point) -> Vector {
+pub fn normal_at(s: &Sphere, p: Point) -> Vector {
     let object_point = inverse(&s.transform) * p;
     let object_normal = object_point - point(0.0, 0.0, 0.0);
     let mut  world_normal = transpose(inverse(&s.transform)) * object_normal;
@@ -585,6 +600,46 @@ pub fn reflect(i: Vector, normal: Vector) -> Vector {
     i - normal * 2.0 * dot(i, normal)
 }
 
+pub fn point_light(position: Point, intensity: Color) -> PointLight {
+    PointLight { position, intensity }
+}
+
+pub fn material() -> Material {
+    Material {
+        color: color(1.0, 1.0, 1.0),
+        ambient: 0.1,
+        diffuse: 0.9,
+        specular: 0.9,
+        shininess: 200.0,
+    }
+}
+
+pub fn lightning(m: &Material, l: &PointLight, point: Point, eye_v: Vector, normal_v: Vector) -> Color {
+    let effective_color = m.color * l.intensity;
+
+    let light_v = normalize(l.position - point);
+
+    let ambient = effective_color * m.ambient;
+
+    let light_dot_normal = dot(light_v, normal_v);
+
+    let (diffuse, specular) = if light_dot_normal < 0.0 {
+        (color(0.0, 0.0, 0.0), color(0.0, 0.0, 0.0))
+    } else {
+        let diffuse = effective_color * m.diffuse * light_dot_normal;
+        let reflect_v = reflect(-light_v, normal_v);
+        let reflect_dot_eye = dot(reflect_v, eye_v);
+
+        let specular = if reflect_dot_eye <= 0.0 {
+            color(0.0, 0.0, 0.0)
+        } else {
+            let factor = reflect_dot_eye.powf(m.shininess);
+            l.intensity*m.specular*factor
+        };
+        (diffuse, specular)
+    };
+    ambient + diffuse + specular
+}
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
     let c = c.mul(255.0).clamp(0.0, 255.0);
     let c_str = format!("{} ", c.round());

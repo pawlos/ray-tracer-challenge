@@ -1,0 +1,88 @@
+#[cfg(test)]
+mod materials {
+    use ray_tracer_challenge::*;
+
+    pub fn setup() -> (Material, Point) {
+        (material(), point(0.0, 0.0, 0.0))
+    }
+    #[test]
+    /// The default material
+    fn the_default_material() {
+        let m = material();
+
+        assert_eq!(m.color, color(1.0, 1.0, 1.0));
+        assert_eq!(m.ambient, 0.1);
+        assert_eq!(m.diffuse, 0.9);
+        assert_eq!(m.specular, 0.9);
+        assert_eq!(m.shininess, 200.0);
+    }
+
+    #[test]
+    /// Lighting with the eye between the light and the surface
+    fn lighting_with_the_eye_between_the_light_and_the_surface() {
+        let (m, position) = setup();
+        let eye_v = vector(0.0, 0.0, -1.0);
+        let normal_v = vector(0.0, 0.0, -1.0);
+        let light = point_light(point(0.0, 0.0, -18.0), color(1.0, 1.0, 1.0));
+
+        let result = lightning(&m, &light, position, eye_v, normal_v);
+
+        assert_eq!(result, color(1.9, 1.9, 1.9))
+    }
+
+    #[test]
+    /// Lightning with the eye between the light and the surface, eye offset 45°
+    fn lightning_with_the_eye_between_light_and_surface_eye_offset_45deg() {
+        let (m, position) = setup();
+        let eye_v = vector(0.0, 2.0_f32.sqrt() / 2.0, 2.0_f32.sqrt() / 2.0);
+        let normal_v = vector(0.0, 0.0, -1.0);
+
+        let light = point_light(point(0.0, 0.0, -10.0), color(1.0, 1.0, 1.0));
+
+        let result = lightning(&m, &light, position, eye_v, normal_v);
+
+        assert_eq!(result, color(1.0, 1.0, 1.0));
+    }
+
+    #[test]
+    /// Lightning with eye opposite surface, light offset 45°
+    fn lightning_with_eye_opposite_surface_light_offset_45deg() {
+        let (m, position) = setup();
+        let eye_v = vector(0.0, 0.0, -1.0);
+        let normal_v = vector(0.0, 0.0, -1.0);
+
+        let light = point_light(point(0.0, 10.0, -10.0), color(1.0, 1.0, 1.0));
+
+        let result = lightning(&m, &light, position, eye_v, normal_v);
+
+        assert_eq!(result, color(0.7364, 0.7364, 0.7364));
+    }
+
+    #[test]
+    /// Lightning with eye in the path of the reflection vector
+    fn lightning_with_eye_in_the_path_of_the_reflection_vector() {
+        let (m, position) = setup();
+        let eye_v = vector(0.0, -(2.0_f32.sqrt() / 2.0), -(2.0_f32.sqrt() / 2.0));
+        let normal_v = vector(0.0, 0.0, -1.0);
+
+        let light = point_light(point(0.0, 10.0, -10.0), color(1.0, 1.0, 1.0));
+
+        let result = lightning(&m, &light, position, eye_v, normal_v);
+
+        assert_eq!(result, color(1.6364, 1.6364, 1.6364));
+    }
+
+    #[test]
+    /// Lightning with the light behind the surface
+    fn lightning_with_the_light_behind_the_surface() {
+        let (m, position) = setup();
+        let eye_v = vector(0.0, 0.0, -1.0);
+        let normal_v = vector(0.0, 0.0, -1.0);
+
+        let light = point_light(point(0.0, 0.0, 10.0), color(1.0, 1.0, 1.0));
+
+        let result = lightning(&m, &light, position, eye_v, normal_v);
+
+        assert_eq!(result, color(0.1, 0.1, 0.1));
+    }
+}

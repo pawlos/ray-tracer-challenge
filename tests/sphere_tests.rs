@@ -124,7 +124,7 @@ mod spheres {
     }
 
     #[test]
-    // The normal on a sphere at a point on the y-axis
+    /// The normal on a sphere at a point on the y-axis
     fn normal_on_a_sphere_at_a_point_on_the_y_axis() {
         let s = sphere();
         let n = normal_at(s, point(0.0, 1.0, 0.0));
@@ -133,7 +133,7 @@ mod spheres {
     }
 
     #[test]
-    // The normal on a sphere at a point on the z-axis
+    /// The normal on a sphere at a point on the z-axis
     fn normal_on_a_sphere_at_a_point_on_the_z_axis() {
         let s = sphere();
         let n = normal_at(s, point(0.0, 0.0, 1.0));
@@ -142,7 +142,7 @@ mod spheres {
     }
 
     #[test]
-    // The normal on a sphere at a point on a non-axial point
+    /// The normal on a sphere at a point on a non-axial point
     fn normal_on_a_sphere_at_a_point_on_a_non_axial_axis() {
         let s = sphere();
         let n = normal_at(s, point(3f32.sqrt()/3.0, 3f32.sqrt()/3.0, 3f32.sqrt()/3.0));
@@ -151,7 +151,7 @@ mod spheres {
     }
 
     #[test]
-    // The normal is a normalized vector
+    /// The normal is a normalized vector
     fn normal_is_a_normalized_vector() {
         let s = sphere();
         let n = normal_at(s, point(3f32.sqrt()/3.0, 3f32.sqrt()/3.0, 3f32.sqrt()/3.0));
@@ -160,7 +160,7 @@ mod spheres {
     }
 
     #[test]
-    // Computing the normal on a translated sphere
+    /// Computing the normal on a translated sphere
     fn computing_the_normal_on_a_translated_sphere() {
         let mut s = sphere();
         set_transform(&mut s, translation(0.0, 1.0, 0.0));
@@ -172,7 +172,7 @@ mod spheres {
     }
 
     #[test]
-    // Computing the normal on a transformed sphere
+    /// Computing the normal on a transformed sphere
     fn computing_the_normal_on_a_transformed_sphere() {
         let mut s = sphere();
         let m = scaling(1.0, 0.5, 1.0) * rotation_z(PI / 5.0);
@@ -181,5 +181,23 @@ mod spheres {
         let n = normal_at(s, point(0.0, 2.0_f32.sqrt()/2.0f32, -(2.0_f32.sqrt()/2.0f32)));
 
         assert_eq!(n, vector(0.0, 0.97014, -0.24254))
+    }
+
+    #[test]
+    /// A sphere has a default material
+    fn sphere_has_a_default_material() {
+        let s = sphere();
+        assert_eq!(s.material, material());
+    }
+
+    #[test]
+    /// A sphere may be assigned a material
+    fn sphere_may_be_assigned_a_material() {
+        let mut s = sphere();
+        let mut m = material();
+        m.ambient = 1.0;
+
+        s.material = m.clone();
+        assert_eq!(s.material, m);
     }
 }

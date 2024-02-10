@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Write;
-use ray_tracer_challenge::{Canvas, canvas_to_ppm, color, hit, intersect, normalize, point, ray, rotation_z, scaling, sphere, translation};
+use ray_tracer_challenge::*;
 
 
 fn chapter5() {

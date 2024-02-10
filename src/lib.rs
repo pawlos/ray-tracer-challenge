@@ -31,15 +31,19 @@ pub struct Matrix {
 }
 
 #[derive(Copy, Clone)]
-struct Ray {
+pub struct Ray {
     origin: Point,
     direction: Vector
 }
 
 #[derive(PartialEq, Debug)]
-struct Sphere;
+pub struct Sphere {
+    id: uuid::Uuid,
+    transform: Matrix,
+}
 
-struct Intersection<'a> {
+#[derive(Debug, Clone, Copy)]
+pub struct Intersection<'a> {
     t: f32,
     object: &'a Sphere, //for now only Sphere
 }
@@ -283,6 +287,11 @@ impl PartialEq for Matrix {
     }
 }
 
+impl<'a> PartialEq for Intersection<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.t == other.t && self.object.id == other.object.id
+    }
+}
 pub fn point(x: f32, y: f32, z: f32) -> Point {
     Point { x, y, z, w: 1.0 }
 }
@@ -502,7 +511,7 @@ pub fn rotation_z(r: f32) -> Matrix {
         [0.0, 0.0, 0.0, 1.0])
 }
 
-fn shearing(sxy: f32, sxz: f32, syx: f32, syz: f32, szx: f32, szy: f32) -> Matrix {
+pub fn shearing(sxy: f32, sxz: f32, syx: f32, syz: f32, szx: f32, szy: f32) -> Matrix {
     Matrix::new4x4(
         [1.0, sxy, sxz, 0.0],
         [syx, 1.0, syz, 0.0],
@@ -510,7 +519,7 @@ fn shearing(sxy: f32, sxz: f32, syx: f32, syz: f32, szx: f32, szy: f32) -> Matri
         [0.0, 0.0, 0.0, 1.0])
 }
 
-fn ray(origin: Point, direction: Vector) -> Ray {
+pub fn ray(origin: Point, direction: Vector) -> Ray {
     Ray { origin, direction }
 }
 
@@ -518,19 +527,20 @@ fn position(ray: Ray, t: f32) -> Point {
     ray.origin + ray.direction * t
 }
 
-fn sphere() -> Sphere {
-    Sphere
+pub fn sphere() -> Sphere {
+    Sphere { id: uuid::Uuid::new_v4(), transform: Matrix::identity4x4() }
 }
 
-fn intersection(t:f32, object: &Sphere) -> Intersection {
+pub fn intersection(t:f32, object: &Sphere) -> Intersection {
     Intersection { t, object }
 }
 
-fn intersects(s: Sphere, r: Ray) -> Vec<f32> {
-    let sphere_to_ray = r.origin - point(0.0, 0.0, 0.0);
+pub fn intersect(s: &Sphere, r: Ray) -> Vec<Intersection> {
+    let r2 = transform(r, inverse(s.transform.clone()));
+    let sphere_to_ray = r2.origin - point(0.0, 0.0, 0.0);
 
-    let a = dot(r.direction, r.direction);
-    let b = 2.0 * dot(r.direction, sphere_to_ray);
+    let a = dot(r2.direction, r2.direction);
+    let b = 2.0 * dot(r2.direction, sphere_to_ray);
     let c = dot(sphere_to_ray, sphere_to_ray) - 1.0;
 
     let discriminant = b*b - 4.0*a*c;
@@ -542,7 +552,25 @@ fn intersects(s: Sphere, r: Ray) -> Vec<f32> {
     let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
     let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
 
-    [t1, t2].to_vec()
+    [intersection(t1, s), intersection(t2, s)].to_vec()
+}
+
+pub fn hit<'a>(xs: &'a mut [Intersection]) -> Option<Intersection<'a>> {
+    xs.sort_by(|i, j| i.t.total_cmp(&j.t));
+
+    let filtered = xs.iter().filter(|i| i.t >= 0.0).take(1).collect::<Vec<_>>();
+    match filtered.len() {
+        | 0 => None,
+        | _ => Some(*filtered[0])
+    }
+}
+
+fn transform(r: Ray, m: Matrix) -> Ray {
+    Ray {origin: m.clone()*r.origin, direction: m*r.direction }
+}
+
+pub fn set_transform(s: &mut Sphere, t: Matrix) {
+    s.transform = t;
 }
 
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
@@ -1519,6 +1547,30 @@ mod rays {
         assert_eq!(position(r, -1.0), point(1.0, 3.0, 4.0));
         assert_eq!(position(r, 2.5), point(4.5, 3.0, 4.0));
     }
+
+    #[test]
+    /// Transforming a ray
+    fn transforming_a_ray() {
+        let r = ray(point(1.0, 2.0, 3.0), vector(0.0, 1.0, 0.0));
+        let m = translation(3.0, 4.0, 5.0);
+
+        let r2 = transform(r, m);
+
+        assert_eq!(r2.origin, point(4.0, 6.0, 8.0));
+        assert_eq!(r2.direction, vector(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    /// Scaling a ray
+    fn scaling_a_ray() {
+        let r = ray(point(1.0, 2.0, 3.0), vector(0.0, 1.0, 0.0));
+        let m = scaling(2.0, 3.0, 4.0);
+
+        let r2 = transform(r, m);
+
+        assert_eq!(r2.origin, point(2.0, 6.0, 12.0));
+        assert_eq!(r2.direction, vector(0.0, 3.0, 0.0));
+    }
 }
 
 #[cfg(test)]
@@ -1531,11 +1583,11 @@ mod spheres {
         let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
         let s = sphere();
 
-        let xs = intersects(s, r);
+        let xs = intersect(&s, r);
 
         assert_eq!(xs.len(), 2);
-        assert_eq!(xs[0], 4.0);
-        assert_eq!(xs[1], 6.0);
+        assert_eq!(xs[0].t, 4.0);
+        assert_eq!(xs[1].t, 6.0);
     }
 
     #[test]
@@ -1544,10 +1596,10 @@ mod spheres {
         let r = ray(point(0.0, 1.0, -5.0), vector(0.0, 0.0, 1.0));
         let s = sphere();
 
-        let xs = intersects(s, r);
+        let xs = intersect(&s, r);
         assert_eq!(xs.len(), 2);
-        assert_eq!(xs[0], 5.0);
-        assert_eq!(xs[1], 5.0);
+        assert_eq!(xs[0].t, 5.0);
+        assert_eq!(xs[1].t, 5.0);
     }
 
     #[test]
@@ -1556,7 +1608,7 @@ mod spheres {
         let r = ray(point(0.0, 2.0, -5.0), vector(0.0, 0.0, 1.0));
         let s = sphere();
 
-        let xs = intersects(s, r);
+        let xs = intersect(&s, r);
         assert_eq!(xs.len(), 0);
     }
 
@@ -1566,10 +1618,10 @@ mod spheres {
         let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 0.0, 1.0));
         let s = sphere();
 
-        let xs = intersects(s, r);
+        let xs = intersect(&s, r);
         assert_eq!(xs.len(), 2);
-        assert_eq!(xs[0], -1.0);
-        assert_eq!(xs[1], 1.0);
+        assert_eq!(xs[0].t, -1.0);
+        assert_eq!(xs[1].t, 1.0);
     }
 
     #[test]
@@ -1578,11 +1630,60 @@ mod spheres {
         let r = ray(point(0.0, 0.0, 5.0), vector(0.0, 0.0, 1.0));
         let s = sphere();
 
-        let xs = intersects(s, r);
+        let xs = intersect(&s, r);
 
         assert_eq!(xs.len(), 2);
-        assert_eq!(xs[0], -6.0);
-        assert_eq!(xs[1], -4.0);
+        assert_eq!(xs[0].t, -6.0);
+        assert_eq!(xs[1].t, -4.0);
+    }
+
+    #[test]
+    /// A sphere's default transformation
+    fn sphere_default_transformation() {
+        let s = sphere();
+
+        assert_eq!(s.transform, Matrix::identity4x4());
+    }
+
+    #[test]
+    /// Changing a sphere's transformation
+    fn changing_a_sphere_transformation() {
+        let mut s = sphere();
+
+        let t = translation(2.0, 3.0, 4.0);
+
+        set_transform(&mut s, t.clone());
+
+        assert_eq!(s.transform, t);
+    }
+
+    #[test]
+    /// Intersecting a scaled sphere with a ray
+    fn intersecting_a_scaled_sphere_with_a_ray() {
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+
+        let mut s = sphere();
+
+        set_transform(&mut s, scaling(2.0, 2.0, 2.0));
+        let xs = intersect(&s, r);
+
+        assert_eq!(xs.len(), 2);
+        assert_eq!(xs[0].t, 3.0);
+        assert_eq!(xs[1].t, 7.0);
+    }
+
+    #[test]
+    /// Intersecting a translated sphere with a ray
+    fn intersecting_a_translated_sphere_with_a_ray() {
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+
+        let mut s = sphere();
+
+        set_transform(&mut s, translation(5.0, 0.0, 0.0));
+
+        let xs = intersect(&s, r);
+
+        assert_eq!(xs.len(), 0);
     }
 }
 
@@ -1612,6 +1713,76 @@ mod intersection {
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, 1.0);
         assert_eq!(xs[1].t, 2.0);
+    }
 
+    #[test]
+    /// Intersect sets the object on the intersection
+    fn intersect_sets_the_object_on_the_intersection() {
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let s = sphere();
+
+        let xs = intersect(&s, r);
+
+        assert_eq!(xs.len(), 2);
+        assert_eq!(*xs[0].object, s);
+        assert_eq!(*xs[1].object, s);
+    }
+
+    #[test]
+    /// The hit, when all intersections have positive t
+    fn hit_when_all_intersections_have_positive_t() {
+        let s = sphere();
+        let i1 = intersection(1.0, &s);
+        let i2 = intersection(2.0, &s);
+
+        let mut xs = [i2, i1];
+
+        let i = hit(&mut xs[..]);
+
+        assert_eq!(i.unwrap(), i1);
+    }
+
+    #[test]
+    // The hit, when some intersections have negative t
+    fn hit_when_some_intersections_have_negative_t() {
+        let s = sphere();
+        let i1 = intersection(-1.0, &s);
+        let i2 = intersection(1.0, &s);
+
+        let mut xs = [i2, i1];
+
+        let i = hit(&mut xs[..]);
+
+        assert_eq!(i.unwrap(), i2);
+    }
+
+    #[test]
+    // The hit, when all intersections have negative t
+    fn hit_when_all_intersections_have_negative_t() {
+        let s = sphere();
+        let i1 = intersection(-2.0, &s);
+        let i2 = intersection(-1.0, &s);
+
+        let mut xs = [i2, i1];
+
+        let i = hit(&mut xs[..]);
+
+        assert_eq!(i, None);
+    }
+
+    #[test]
+    // The hit is always the lowest non-negative intersection
+    fn hit_is_always_the_lowest_non_negative_intersection() {
+        let s = sphere();
+        let i1 = intersection(5.0, &s);
+        let i2 = intersection(7.0, &s);
+        let i3 = intersection(-3.0, &s);
+        let i4 =intersection(2.0, &s);
+
+        let mut xs  = [i1, i2, i3, i4];
+
+        let i = hit(&mut xs[..]);
+
+        assert_eq!(i.unwrap(), i4)
     }
 }

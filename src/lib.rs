@@ -456,7 +456,7 @@ pub fn cofactor(a: Matrix, row: usize, col: usize) -> f32 {
     minor(a, row, col) * cofactors.at(row, col)
 }
 
-pub fn inverse(a: Matrix) -> Matrix {
+pub fn inverse(a: &Matrix) -> Matrix {
     assert!(a.clone().is_invertible());
 
     let mut values = [[0.0; 4]; 4];
@@ -536,7 +536,7 @@ pub fn intersection(t:f32, object: &Sphere) -> Intersection {
 }
 
 pub fn intersect(s: &Sphere, r: Ray) -> Vec<Intersection> {
-    let r2 = transform(r, inverse(s.transform.clone()));
+    let r2 = transform(r, inverse(&s.transform));
     let sphere_to_ray = r2.origin - point(0.0, 0.0, 0.0);
 
     let a = dot(r2.direction, r2.direction);
@@ -571,6 +571,18 @@ pub fn transform(r: Ray, m: Matrix) -> Ray {
 
 pub fn set_transform(s: &mut Sphere, t: Matrix) {
     s.transform = t;
+}
+
+pub fn normal_at(s: Sphere, p: Point) -> Vector {
+    let object_point = inverse(&s.transform) * p;
+    let object_normal = object_point - point(0.0, 0.0, 0.0);
+    let mut  world_normal = transpose(inverse(&s.transform)) * object_normal;
+    world_normal.w = 0.0;
+    normalize(world_normal)
+}
+
+pub fn reflect(i: Vector, normal: Vector) -> Vector {
+    i - normal * 2.0 * dot(i, normal)
 }
 
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {

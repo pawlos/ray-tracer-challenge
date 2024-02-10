@@ -41,4 +41,27 @@ mod tuples {
         let a = vector(4f32, -4f32, 3f32);
         assert_eq!(a, Vector { x: 4f32, y: -4f32, z: 3f32, w: 0f32 });
     }
+
+    #[test]
+    /// Reflecting a vector approaching at 45°
+    fn reflecting_a_vector_approaching_at_45deg() {
+        let v = vector(1.0, -1.0, 0.0);
+        let n = vector(0.0, 1.0, 0.0);
+
+        let r = reflect(v, n);
+
+        assert_eq!(r, vector(1.0, 1.0, 0.0));
+    }
+
+    #[test]
+    /// Reflecting a vector off a slanted surface
+    fn reflecting_a_vector_off_a_slanted_surface() {
+        let v = vector(0.0, -1.0, 0.0);
+
+        let n = vector(2.0_f32.sqrt() /2.0, 2.0_f32.sqrt() / 2.0, 0.0);
+
+        let r = reflect(v, n);
+
+        assert_eq!(r, vector(1.0, 0.0, 0.0));
+    }
 }

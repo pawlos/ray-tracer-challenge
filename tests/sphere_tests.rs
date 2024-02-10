@@ -2,6 +2,7 @@ use ray_tracer_challenge::*;
 
 #[cfg(test)]
 mod spheres {
+    use std::f32::consts::PI;
     use super::*;
 
     #[test]
@@ -111,5 +112,74 @@ mod spheres {
         let xs = intersect(&s, r);
 
         assert_eq!(xs.len(), 0);
+    }
+
+    #[test]
+    /// The normal on a sphere at a point on the x-axis
+    fn normal_on_a_sphere_at_a_point_on_the_x_axis() {
+        let s = sphere();
+        let n = normal_at(s, point(1.0, 0.0, 0.0));
+
+        assert_eq!(n, vector(1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    // The normal on a sphere at a point on the y-axis
+    fn normal_on_a_sphere_at_a_point_on_the_y_axis() {
+        let s = sphere();
+        let n = normal_at(s, point(0.0, 1.0, 0.0));
+
+        assert_eq!(n, vector(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    // The normal on a sphere at a point on the z-axis
+    fn normal_on_a_sphere_at_a_point_on_the_z_axis() {
+        let s = sphere();
+        let n = normal_at(s, point(0.0, 0.0, 1.0));
+
+        assert_eq!(n, vector(0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    // The normal on a sphere at a point on a non-axial point
+    fn normal_on_a_sphere_at_a_point_on_a_non_axial_axis() {
+        let s = sphere();
+        let n = normal_at(s, point(3f32.sqrt()/3.0, 3f32.sqrt()/3.0, 3f32.sqrt()/3.0));
+
+        assert_eq!(n, vector(3f32.sqrt()/3.0, 3f32.sqrt()/3.0, 3f32.sqrt()/3.0));
+    }
+
+    #[test]
+    // The normal is a normalized vector
+    fn normal_is_a_normalized_vector() {
+        let s = sphere();
+        let n = normal_at(s, point(3f32.sqrt()/3.0, 3f32.sqrt()/3.0, 3f32.sqrt()/3.0));
+
+        assert_eq!(n, normalize(n));
+    }
+
+    #[test]
+    // Computing the normal on a translated sphere
+    fn computing_the_normal_on_a_translated_sphere() {
+        let mut s = sphere();
+        set_transform(&mut s, translation(0.0, 1.0, 0.0));
+
+        // std::f32::consts::FRAC_1_SQRT_2 = 0.70711
+        let n = normal_at(s, point(0.0, 1.70711, -std::f32::consts::FRAC_1_SQRT_2));
+
+        assert_eq!(n, vector(0.0, std::f32::consts::FRAC_1_SQRT_2, -std::f32::consts::FRAC_1_SQRT_2))
+    }
+
+    #[test]
+    // Computing the normal on a transformed sphere
+    fn computing_the_normal_on_a_transformed_sphere() {
+        let mut s = sphere();
+        let m = scaling(1.0, 0.5, 1.0) * rotation_z(PI / 5.0);
+        set_transform(&mut s, m);
+
+        let n = normal_at(s, point(0.0, 2.0_f32.sqrt()/2.0f32, -(2.0_f32.sqrt()/2.0f32)));
+
+        assert_eq!(n, vector(0.0, 0.97014, -0.24254))
     }
 }

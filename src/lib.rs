@@ -36,7 +36,7 @@ pub struct Ray {
     pub direction: Vector
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct Sphere {
     id: uuid::Uuid,
     pub transform: Matrix,
@@ -49,6 +49,7 @@ pub struct Intersection<'a> {
     pub object: &'a Sphere, //for now only Sphere
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointLight {
     pub position: Point,
     pub intensity: Color,
@@ -61,6 +62,11 @@ pub struct Material {
     pub diffuse: f32,
     pub specular: f32,
     pub shininess: f32
+}
+
+pub struct World {
+    pub objects: Vec<Sphere>,
+    pub lights: Vec<PointLight>,
 }
 
 impl Canvas {
@@ -305,6 +311,13 @@ impl PartialEq for Matrix {
 impl<'a> PartialEq for Intersection<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.t == other.t && self.object.id == other.object.id
+    }
+}
+
+impl PartialEq for Sphere {
+    fn eq(&self, other: &Self) -> bool {
+        self.material == other.material &&
+        self.transform == other.transform
     }
 }
 pub fn point(x: f32, y: f32, z: f32) -> Point {
@@ -640,6 +653,25 @@ pub fn lightning(m: &Material, l: &PointLight, point: Point, eye_v: Vector, norm
     };
     ambient + diffuse + specular
 }
+
+pub fn world() -> World {
+    World { objects: vec![], lights: vec![] }
+}
+
+pub fn default_world() -> World {
+    let light = point_light(point(-10.0, -10.0, -10.0), color(1.0, 1.0, 1.0));
+
+    let mut s1 = sphere();
+    s1.material = material();
+    s1.material.color = color(0.8, 1.0, 0.6);
+    s1.material.diffuse = 0.7;
+    s1.material.specular = 0.2;
+
+    let mut s2 = sphere();
+    s2.transform = scaling(0.5, 0.5, 0.5);
+    World { objects: vec![s1, s2], lights: vec![light] }
+}
+
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
     let c = c.mul(255.0).clamp(0.0, 255.0);
     let c_str = format!("{} ", c.round());

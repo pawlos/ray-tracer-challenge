@@ -87,11 +87,11 @@ fn chapter6() {
             let mut xs = intersect(&shape, r);
 
             match hit(&mut xs) {
-                | Some(i) => {
-                    let point = position(r, i.t);
-                    let normal = normal_at(i.object, point);
+                | Some(hit) => {
+                    let point = position(r, hit.t);
+                    let normal = normal_at(hit.object, point);
                     let eye = r.direction;
-                    let color = lightning(&i.object.material, &light, point, eye, normal);
+                    let color = lightning(&hit.object.material, &light, point, eye, normal);
                     canvas.write_pixel(x ,y, color)
                 },
                 _ => {}

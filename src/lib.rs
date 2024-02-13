@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::vec;
 
@@ -67,6 +68,15 @@ pub struct Material {
 pub struct World {
     pub objects: Vec<Sphere>,
     pub lights: Vec<PointLight>,
+}
+
+pub struct Computation<'a> {
+    pub t: f32,
+    pub object: &'a Sphere,
+    pub point: Point,
+    pub eye_v: Vector,
+    pub normal_v: Vector,
+    pub inside: bool,
 }
 
 impl Canvas {
@@ -581,6 +591,35 @@ pub fn intersect(s: &Sphere, r: Ray) -> Vec<Intersection> {
     let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
 
     [intersection(t1, s), intersection(t2, s)].to_vec()
+}
+
+pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
+    let mut intersections = w.objects.iter().flat_map(|o| intersect(o, r)).collect::<Vec<_>>();
+    intersections.sort_by(|i, j|
+        if i.t < j.t {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        });
+
+    intersections
+}
+
+pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
+    let point = position(r, i.t);
+    let mut normal_v = normal_at(i.object, point);
+    let inside = dot(normal_v, -r.direction) < 0.0;
+    if inside {
+        normal_v = -normal_v;
+    }
+    Computation {
+        t: i.t,
+        object: i.object,
+        point,
+        eye_v: -r.direction,
+        inside,
+        normal_v,
+    }
 }
 
 pub fn hit<'a>(xs: &'a mut [Intersection]) -> Option<Intersection<'a>> {

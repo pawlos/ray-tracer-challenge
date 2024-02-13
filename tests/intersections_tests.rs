@@ -56,7 +56,7 @@ mod intersection {
     }
 
     #[test]
-    // The hit, when some intersections have negative t
+    /// The hit, when some intersections have negative t
     fn hit_when_some_intersections_have_negative_t() {
         let s = sphere();
         let i1 = intersection(-1.0, &s);
@@ -70,7 +70,7 @@ mod intersection {
     }
 
     #[test]
-    // The hit, when all intersections have negative t
+    /// The hit, when all intersections have negative t
     fn hit_when_all_intersections_have_negative_t() {
         let s = sphere();
         let i1 = intersection(-2.0, &s);
@@ -84,7 +84,7 @@ mod intersection {
     }
 
     #[test]
-    // The hit is always the lowest non-negative intersection
+    /// The hit is always the lowest non-negative intersection
     fn hit_is_always_the_lowest_non_negative_intersection() {
         let s = sphere();
         let i1 = intersection(5.0, &s);
@@ -97,5 +97,46 @@ mod intersection {
         let i = hit(&mut xs[..]);
 
         assert_eq!(i.unwrap(), i4)
+    }
+
+    #[test]
+    /// Precomputing the state of an intersection
+    fn precomputing_the_state_of_an_intersection() {
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let shape = sphere();
+        let i = intersection(4.0, &shape);
+
+        let comps = prepare_computations(i, r);
+
+        assert_eq!(comps.t, i.t);
+        assert_eq!(comps.object, i.object);
+        assert_eq!(comps.point, point(0.0, 0.0, -1.0));
+        assert_eq!(comps.eye_v, vector(0.0, 0.0, -1.0));
+        assert_eq!(comps.normal_v, vector(0.0, 0.0, -1.0));
+    }
+
+    #[test]
+    /// The hit, when an intersection occurs on the outside
+    fn hit_when_an_intersection_occurs_on_the_outside() {
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let shape = sphere();
+        let i = intersection(4.0, &shape);
+
+        let comps = prepare_computations(i, r);
+        assert!(!comps.inside)
+    }
+
+    #[test]
+    /// The hit, when an intersection occurs on the inside
+    fn hit_when_an_intersection_occurs_on_the_inside() {
+        let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 0.0, 1.0));
+        let shape = sphere();
+        let i = intersection(4.0, &shape);
+
+        let comps = prepare_computations(i, r);
+        assert_eq!(comps.point, point(0.0, 0.0, 1.0));
+        assert_eq!(comps.eye_v, vector(0.0, 0.0, -1.0));
+        assert!(!comps.inside);
+        assert_eq!(comps.normal_v, vector(0.0, 0.0, -1.0));
     }
 }

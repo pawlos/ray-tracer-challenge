@@ -31,4 +31,19 @@ mod world {
         assert!(w.objects.contains(&s1));
         assert!(w.objects.contains(&s2));
     }
+
+    #[test]
+    /// Intersects a world with a ray
+    fn intersects_a_world_with_a_ray() {
+        let w = default_world();
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+
+        let xs = intersect_world(&w, r);
+
+        assert_eq!(xs.len(), 4);
+        assert_eq!(xs[0].t, 4.0);
+        assert_eq!(xs[1].t, 4.5);
+        assert_eq!(xs[2].t, 5.5);
+        assert_eq!(xs[3].t, 6.0);
+    }
 }

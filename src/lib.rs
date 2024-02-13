@@ -711,6 +711,10 @@ pub fn default_world() -> World {
     World { objects: vec![s1, s2], lights: vec![light] }
 }
 
+pub fn shade_hit(w: &World, c: &Computation) -> Color {
+    lightning(&c.object.material, &w.lights[0], c.point, c.eye_v, c.normal_v)
+}
+
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
     let c = c.mul(255.0).clamp(0.0, 255.0);
     let c_str = format!("{} ", c.round());

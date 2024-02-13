@@ -131,12 +131,43 @@ mod intersection {
     fn hit_when_an_intersection_occurs_on_the_inside() {
         let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 0.0, 1.0));
         let shape = sphere();
-        let i = intersection(4.0, &shape);
+        let i = intersection(1.0, &shape);
 
         let comps = prepare_computations(i, r);
         assert_eq!(comps.point, point(0.0, 0.0, 1.0));
         assert_eq!(comps.eye_v, vector(0.0, 0.0, -1.0));
-        assert!(!comps.inside);
+        assert!(comps.inside);
         assert_eq!(comps.normal_v, vector(0.0, 0.0, -1.0));
+    }
+
+    #[test]
+    /// Shading an intersection
+    fn shading_an_intersection() {
+        let w = default_world();
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let shape = w.objects.first().unwrap();
+
+        let i = intersection(4.0, shape);
+
+        let comps = prepare_computations(i, r);
+        let c = shade_hit(&w, &comps);
+
+        assert_eq!(c, color(0.38066, 0.47583, 0.2855));
+    }
+
+    #[test]
+    /// Shading an intersection from the inside
+    fn shading_an_intersection_from_the_inside() {
+        let mut w = default_world();
+        w.lights[0] = point_light(point(0.0, 0.25, 0.0), color(1.0, 1.0, 1.0));
+        let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 0.0, 1.0));
+        let shape = &w.objects[1];
+
+        let i = intersection(0.5, shape);
+
+        let comps = prepare_computations(i, r);
+        let c = shade_hit(&w, &comps);
+
+        assert_eq!(c, color(0.90498, 0.90498, 0.90498));
     }
 }

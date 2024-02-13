@@ -170,4 +170,38 @@ mod intersection {
 
         assert_eq!(c, color(0.90498, 0.90498, 0.90498));
     }
+
+    #[test]
+    /// The color when a ray misses
+    fn color_when_ray_misses() {
+        let w = default_world();
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 1.0, 0.0));
+        let c = color_at(&w, r);
+
+        assert_eq!(c, color(0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    /// The color when a ray hits
+    fn color_when_a_ray_hits() {
+        let w = default_world();
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let c = color_at(&w, r);
+
+        assert_eq!(c, color(0.38066, 0.47583, 0.2855));
+    }
+
+    #[test]
+    /// The color with an intersection behind the ray
+    fn color_with_an_intersection_behind_the_ray() {
+        let mut w = default_world();
+        w.objects[0].material.ambient = 1.0;
+        w.objects[1].material.ambient = 1.0;
+
+        let r = ray(point(0.0, 0.0, 0.75), vector(0.0, 0.0, -1.0));
+        let c = color_at(&w, r);
+
+        assert_eq!(c, w.objects[1].material.color);
+
+    }
 }

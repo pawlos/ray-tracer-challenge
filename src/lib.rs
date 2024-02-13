@@ -715,6 +715,19 @@ pub fn shade_hit(w: &World, c: &Computation) -> Color {
     lightning(&c.object.material, &w.lights[0], c.point, c.eye_v, c.normal_v)
 }
 
+pub fn color_at(w: &World, r: Ray) -> Color {
+    let mut intersections = intersect_world(w, r);
+    let hit = hit(&mut intersections[..]);
+    match hit
+    {
+        | None => color(0.0, 0.0, 0.0),
+        | Some(i) => {
+            let comp = prepare_computations(i, r);
+            shade_hit(w, &comp)
+        }
+    }
+}
+
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {
     let c = c.mul(255.0).clamp(0.0, 255.0);
     let c_str = format!("{} ", c.round());

@@ -289,7 +289,7 @@ mod matrix {
             [1.0, -5.0, 1.0, 8.0],
             [7.0, 7.0, -6.0, -7.0],
             [1.0, -3.0, 7.0, 4.0]);
-        let b = inverse(a.clone());
+        let b = inverse(&a);
         assert_eq!(determinant(a.clone()), 532.0);
         assert_eq!(cofactor(a.clone(), 2, 3), -160.0);
         assert_eq!(b.at(3,2), -160.0/532.0);
@@ -312,7 +312,7 @@ mod matrix {
             [-6.0, 0.0, 9.0, 6.0],
             [-3.0, 0.0, -9.0, -4.0]);
 
-        assert_eq!(inverse(a), Matrix::new4x4(
+        assert_eq!(inverse(&a), Matrix::new4x4(
             [-0.15385, -0.15385, -0.28205, -0.53846],
             [-0.07692, 0.12308, 0.02564, 0.03077],
             [0.35897, 0.35897, 0.43590, 0.92308],
@@ -328,7 +328,7 @@ mod matrix {
             [-4.0, 9.0, 6.0, 4.0],
             [-7.0, 6.0, 6.0, 2.0]);
 
-        assert_eq!(inverse(a), Matrix::new4x4(
+        assert_eq!(inverse(&a), Matrix::new4x4(
             [-0.04074, -0.07778, 0.14444, -0.22222],
             [-0.07778, 0.03333, 0.36667, -0.33333],
             [-0.02901, -0.14630, -0.10926, 0.12963],
@@ -352,6 +352,6 @@ mod matrix {
 
         let c = a.clone() * b.clone();
 
-        assert_eq!(c * inverse(b), a);
+        assert_eq!(c * inverse(&b), a);
     }
 }

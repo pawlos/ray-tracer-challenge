@@ -57,6 +57,7 @@ fn chapter5() {
     f.sync_all().unwrap();
 }
 
+#[allow(dead_code)]
 fn chapter6() {
     let ray_origin = point(0.0, 0.0, -5.0);
     let wall_z = 10.0;
@@ -104,7 +105,66 @@ fn chapter6() {
     f.sync_all().unwrap();
 }
 
+fn chapter7() {
+    let mut floor = sphere();
+    floor.transform = scaling(10.0, 0.01, 10.0);
+    floor.material = material();
+    floor.material.color = color(1.0, 0.0, 0.9);
+    floor.material.specular = 0.0;
+
+    let mut left_wall = sphere();
+    left_wall.transform = translation(0.0, 0.0, 5.0) * rotation_y(-PI/4.0) * rotation_x(PI/2.0) *
+                          scaling(10.0, 0.01, 10.0);
+    left_wall.material = floor.material.clone();
+
+    let mut right_wall = sphere();
+    right_wall.transform = translation(0.0, 0.0, 5.0) * rotation_y(PI/4.0) * rotation_x(PI/2.0) *
+                           scaling(10.0, 0.01, 10.0);
+
+    let mut middle = sphere();
+    middle.transform = translation(-0.5, 1.0, 0.5);
+    middle.material = material();
+    middle.material.color = color(0.1, 1.0, 0.5);
+    middle.material.diffuse = 0.7;
+    middle.material.specular = 0.3;
+
+    let mut right = sphere();
+    right.transform = translation(1.5, 0.5, -0.5) * scaling(0.5, 0.5, 0.5);
+    right.material = material();
+    right.material.color = color(0.5, 1.0, 0.1);
+    right.material.diffuse = 0.7;
+    right.material.specular = 0.3;
+
+    let mut left = sphere();
+    left.transform = translation(-1.5, 0.33, -0.75) * scaling(0.33, 0.33, 0.33);
+    left.material.color = color(1.0, 0.8, 0.1);
+    left.material.diffuse = 0.7;
+    left.material.specular = 0.3;
+
+    let mut world = world();
+    world.lights.push(point_light(point(-10.0, 10.0, -10.0), color(1.0, 1.0, 1.0)));
+
+    world.objects.push(floor);
+    world.objects.push(left_wall);
+    world.objects.push(right_wall);
+    world.objects.push(middle);
+    world.objects.push(right);
+    world.objects.push(left);
+
+    let mut camara = camera(800, 600, PI/3.0);
+    camara.transform = view_transformation(
+        point(0.0, 1.5, -5.0),
+        point(0.0, 1.0, 0.0),
+        vector(0.0, 1.0, 0.0));
+
+    let canvas = render(&camara, &world);
+    let sphere_data = canvas_to_ppm(canvas);
+    let mut f = File::create("world.ppm").unwrap();
+    f.write_all(sphere_data.as_bytes()).unwrap();
+    f.sync_all().unwrap();
+
+}
 fn main() {
-    chapter6();
+    chapter7();
     println!("Done");
 }

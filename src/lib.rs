@@ -79,6 +79,16 @@ pub struct Computation<'a> {
     pub inside: bool,
 }
 
+pub struct Camera {
+    pub hsize: i32,
+    pub vsize: i32,
+    pub half_width: f32,
+    pub half_height: f32,
+    pub field_of_view: f32,
+    pub transform: Matrix,
+    pub pixel_size: f32,
+}
+
 impl Canvas {
     pub fn new(width: i32, height: i32) -> Self {
         Canvas {width , height, pixels: vec![color(0.0,0.0,0.0); (width * height) as usize]}
@@ -348,7 +358,7 @@ pub fn magnitude(v: Vector) -> f32 {
     (v.x * v.x + v.y * v.y + v.z * v.z).sqrt()
 }
 
-pub fn normalize(v: Vector) -> Tuple {
+pub fn normalize(v: Vector) -> Vector {
     assert_eq!(v.w, 0.0f32);
     let magnitude = magnitude(v);
     Vector {
@@ -726,6 +736,60 @@ pub fn color_at(w: &World, r: Ray) -> Color {
             shade_hit(w, &comp)
         }
     }
+}
+
+pub fn view_transformation(from: Point, to: Point, up: Vector) -> Matrix {
+    let forward = normalize(to - from);
+    let left = cross(forward, normalize(up));
+    let true_up = cross(left, forward);
+    Matrix::new4x4(
+        [left.x, left.y, left.z, 0.0],
+        [true_up.x, true_up.y, true_up.z, 0.0],
+        [-forward.x, -forward.y, -forward.z, 0.0],
+        [0.0, 0.0, 0.0, 1.0]) * translation(-from.x, -from.y, -from.z)
+}
+
+pub fn camera(hsize: i32, vsize: i32, field_of_view: f32) -> Camera {
+    let half_view = (field_of_view / 2.0).tan();
+    let aspect = (hsize as f32) / (vsize as f32);
+    let (half_width, half_height) = if aspect >= 1.0 {
+        (half_view, half_view / aspect)
+    } else {
+        (half_view * aspect, half_view)
+    };
+    Camera {
+        hsize,
+        vsize,
+        field_of_view,
+        half_width,
+        half_height,
+        transform: Matrix::identity4x4(),
+        pixel_size: half_width * 2.0 / (hsize as f32) }
+}
+
+pub fn ray_for_pixel(c: &Camera, px: i32, py: i32) -> Ray {
+    let x_offset = (px as f32 + 0.5) * c.pixel_size;
+    let y_offset = (py as f32 + 0.5) * c.pixel_size;
+
+    let world_x = c.half_width - x_offset;
+    let world_y = c.half_height - y_offset;
+
+    let pixel = inverse(&c.transform) * point(world_x, world_y, -1.0);
+    let origin = inverse(&c.transform) * point(0.0, 0.0, 0.0);
+    let direction = normalize(pixel - origin);
+    Ray { origin, direction }
+}
+
+pub fn render(camera: &Camera, world: &World) -> Canvas {
+    let mut c = Canvas::new(camera.hsize, camera.vsize);
+    for y in 0..camera.vsize {
+        for x in 0..camera.hsize {
+            let ray = ray_for_pixel(camera, x, y);
+            let color = color_at(world, ray);
+            c.write_pixel(x, y, color)
+        }
+    }
+    c
 }
 
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {

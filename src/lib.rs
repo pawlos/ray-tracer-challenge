@@ -319,7 +319,7 @@ impl PartialEq for Matrix {
         else {
             for i in 0..self.size {
                 for j in 0 .. self.size  {
-                    if self.at(i,j) - other.at(i,j) > EPS {
+                    if (self.at(i,j) - other.at(i,j)).abs() > EPS {
                         return false;
                     }
                 }
@@ -595,7 +595,7 @@ pub fn intersect(s: &Sphere, r: Ray) -> Vec<Intersection> {
     let discriminant = b*b - 4.0*a*c;
 
     if discriminant < 0.0 {
-        return [].to_vec();
+        return vec![];
     }
 
     let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
@@ -605,7 +605,8 @@ pub fn intersect(s: &Sphere, r: Ray) -> Vec<Intersection> {
 }
 
 pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
-    let mut intersections = w.objects.iter().flat_map(|o| intersect(o, r)).collect::<Vec<_>>();
+    let mut intersections = w.objects.iter().flat_map(|o| intersect(o, r))
+        .collect::<Vec<_>>();
     intersections.sort_by(|i, j|
         if i.t <= j.t {
             Ordering::Less
@@ -630,11 +631,11 @@ pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
         eye_v: -r.direction,
         inside,
         normal_v,
-        over_point: point + normal_v * EPS
+        over_point: point + normal_v * EPS * 100.0
     }
 }
 
-pub fn hit<'a>(xs: &'a mut [Intersection]) -> Option<Intersection<'a>> {
+pub fn hit<'a>(xs: &'a mut Vec<Intersection>) -> Option<Intersection<'a>> {
     xs.sort_by(|i, j| i.t.total_cmp(&j.t));
 
     let filtered = xs.iter().filter(|i| i.t >= 0.0).take(1).collect::<Vec<_>>();
@@ -735,7 +736,7 @@ pub fn shade_hit(w: &World, c: &Computation) -> Color {
 
 pub fn color_at(w: &World, r: Ray) -> Color {
     let mut intersections = intersect_world(w, r);
-    let hit = hit(&mut intersections[..]);
+    let hit = hit(&mut intersections);
     match hit
     {
         | None => color(0.0, 0.0, 0.0),
@@ -807,7 +808,7 @@ pub fn is_shadowed(w: &World, p: Point) -> bool {
     let r = ray(p, direction);
 
     let mut intersections = intersect_world(w, r);
-    let h = hit(&mut intersections[..]);
+    let h = hit(&mut intersections);
 
     match h {
         | Some(intersection) => intersection.t < distance,

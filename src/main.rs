@@ -152,13 +152,13 @@ fn chapter7() {
     world.objects.push(right);
     world.objects.push(left);
 
-    let mut camara = camera(800, 600, PI/3.0);
-    camara.transform = view_transformation(
+    let mut camera = camera(800, 600, PI/3.0);
+    camera.transform = view_transformation(
         point(0.0, 1.5, -5.0),
         point(0.0, 1.0, 0.0),
         vector(0.0, 1.0, 0.0));
 
-    let canvas = render(&camara, &world);
+    let canvas = render(&camera, &world);
     let sphere_data = canvas_to_ppm(canvas);
     let mut f = File::create("world-shadowed.ppm").unwrap();
     f.write_all(sphere_data.as_bytes()).unwrap();

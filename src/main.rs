@@ -92,7 +92,7 @@ fn chapter6() {
                     let point = position(r, hit.t);
                     let normal = normal_at(hit.object, point);
                     let eye = r.direction;
-                    let color = lightning(&hit.object.material, &light, point, eye, normal);
+                    let color = lightning(&hit.object.material, &light, point, eye, normal, false);
                     canvas.write_pixel(x ,y, color)
                 },
                 _ => {}
@@ -109,7 +109,7 @@ fn chapter7() {
     let mut floor = sphere();
     floor.transform = scaling(10.0, 0.01, 10.0);
     floor.material = material();
-    floor.material.color = color(1.0, 0.0, 0.9);
+    floor.material.color = color(1.0, 0.9, 0.9);
     floor.material.specular = 0.0;
 
     let mut left_wall = sphere();
@@ -120,6 +120,7 @@ fn chapter7() {
     let mut right_wall = sphere();
     right_wall.transform = translation(0.0, 0.0, 5.0) * rotation_y(PI/4.0) * rotation_x(PI/2.0) *
                            scaling(10.0, 0.01, 10.0);
+    right_wall.material = floor.material.clone();
 
     let mut middle = sphere();
     middle.transform = translation(-0.5, 1.0, 0.5);
@@ -159,7 +160,7 @@ fn chapter7() {
 
     let canvas = render(&camara, &world);
     let sphere_data = canvas_to_ppm(canvas);
-    let mut f = File::create("world.ppm").unwrap();
+    let mut f = File::create("world-shadowed.ppm").unwrap();
     f.write_all(sphere_data.as_bytes()).unwrap();
     f.sync_all().unwrap();
 

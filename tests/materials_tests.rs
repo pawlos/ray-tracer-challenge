@@ -25,7 +25,7 @@ mod materials {
         let normal_v = vector(0.0, 0.0, -1.0);
         let light = point_light(point(0.0, 0.0, -18.0), color(1.0, 1.0, 1.0));
 
-        let result = lightning(&m, &light, position, eye_v, normal_v);
+        let result = lightning(&m, &light, position, eye_v, normal_v, false);
 
         assert_eq!(result, color(1.9, 1.9, 1.9))
     }
@@ -39,7 +39,7 @@ mod materials {
 
         let light = point_light(point(0.0, 0.0, -10.0), color(1.0, 1.0, 1.0));
 
-        let result = lightning(&m, &light, position, eye_v, normal_v);
+        let result = lightning(&m, &light, position, eye_v, normal_v, false);
 
         assert_eq!(result, color(1.0, 1.0, 1.0));
     }
@@ -53,7 +53,7 @@ mod materials {
 
         let light = point_light(point(0.0, 10.0, -10.0), color(1.0, 1.0, 1.0));
 
-        let result = lightning(&m, &light, position, eye_v, normal_v);
+        let result = lightning(&m, &light, position, eye_v, normal_v, false);
 
         assert_eq!(result, color(0.7364, 0.7364, 0.7364));
     }
@@ -67,7 +67,7 @@ mod materials {
 
         let light = point_light(point(0.0, 10.0, -10.0), color(1.0, 1.0, 1.0));
 
-        let result = lightning(&m, &light, position, eye_v, normal_v);
+        let result = lightning(&m, &light, position, eye_v, normal_v, false);
 
         assert_eq!(result, color(1.6364, 1.6364, 1.6364));
     }
@@ -81,7 +81,21 @@ mod materials {
 
         let light = point_light(point(0.0, 0.0, 10.0), color(1.0, 1.0, 1.0));
 
-        let result = lightning(&m, &light, position, eye_v, normal_v);
+        let result = lightning(&m, &light, position, eye_v, normal_v, false);
+
+        assert_eq!(result, color(0.1, 0.1, 0.1));
+    }
+
+    #[test]
+    /// Lightning with the surface in shadow
+    fn lightning_with_the_surface_in_shadow() {
+        let (m, position) = setup();
+        let eye_v = vector(0.0, 0.0, -1.0);
+        let normal_v = vector(0.0, 0.0, -1.0);
+        let light = point_light(point(0.0, 0.0, -10.0), color(1.0, 1.0, 1.0));
+        let in_shadow = true;
+
+        let result = lightning(&m, &light, position, eye_v, normal_v, in_shadow);
 
         assert_eq!(result, color(0.1, 0.1, 0.1));
     }

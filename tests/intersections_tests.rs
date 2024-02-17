@@ -202,6 +202,20 @@ mod intersection {
         let c = color_at(&w, r);
 
         assert_eq!(c, w.objects[1].material.color);
+    }
 
+    #[test]
+    /// The hit should offset the point
+    fn hit_should_offset_the_point() {
+        let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let mut shape = sphere();
+        shape.transform = translation(0.0, 0.0, 1.0);
+
+        let i = intersection(5.0, &shape);
+
+        let comps = prepare_computations(i, r);
+
+        assert!(comps.over_point.z < -EPS/2.0);
+        assert!(comps.point.z > comps.over_point.z);
     }
 }

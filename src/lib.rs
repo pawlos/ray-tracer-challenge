@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::vec;
 
-pub const EPS: f32 = 1e-4;
+pub const EPS: f32 = 0.0001;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Tuple {
@@ -77,6 +77,7 @@ pub struct Computation<'a> {
     pub eye_v: Vector,
     pub normal_v: Vector,
     pub inside: bool,
+    pub over_point: Point,
 }
 
 pub struct Camera {
@@ -606,7 +607,7 @@ pub fn intersect(s: &Sphere, r: Ray) -> Vec<Intersection> {
 pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
     let mut intersections = w.objects.iter().flat_map(|o| intersect(o, r)).collect::<Vec<_>>();
     intersections.sort_by(|i, j|
-        if i.t < j.t {
+        if i.t <= j.t {
             Ordering::Less
         } else {
             Ordering::Greater
@@ -629,6 +630,7 @@ pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
         eye_v: -r.direction,
         inside,
         normal_v,
+        over_point: point + normal_v * EPS
     }
 }
 
@@ -676,7 +678,7 @@ pub fn material() -> Material {
     }
 }
 
-pub fn lightning(m: &Material, l: &PointLight, point: Point, eye_v: Vector, normal_v: Vector) -> Color {
+pub fn lightning(m: &Material, l: &PointLight, point: Point, eye_v: Vector, normal_v: Vector, in_shadow: bool) -> Color {
     let effective_color = m.color * l.intensity;
 
     let light_v = normalize(l.position - point);
@@ -700,7 +702,12 @@ pub fn lightning(m: &Material, l: &PointLight, point: Point, eye_v: Vector, norm
         };
         (diffuse, specular)
     };
-    ambient + diffuse + specular
+
+    if in_shadow {
+        ambient
+    } else {
+        ambient + diffuse + specular
+    }
 }
 
 pub fn world() -> World {
@@ -708,7 +715,7 @@ pub fn world() -> World {
 }
 
 pub fn default_world() -> World {
-    let light = point_light(point(-10.0, -10.0, -10.0), color(1.0, 1.0, 1.0));
+    let light = point_light(point(-10.0, 10.0, -10.0), color(1.0, 1.0, 1.0));
 
     let mut s1 = sphere();
     s1.material = material();
@@ -722,7 +729,8 @@ pub fn default_world() -> World {
 }
 
 pub fn shade_hit(w: &World, c: &Computation) -> Color {
-    lightning(&c.object.material, &w.lights[0], c.point, c.eye_v, c.normal_v)
+    let is_shadowed = is_shadowed(w, c.over_point);
+    lightning(&c.object.material, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
 }
 
 pub fn color_at(w: &World, r: Ray) -> Color {
@@ -790,6 +798,21 @@ pub fn render(camera: &Camera, world: &World) -> Canvas {
         }
     }
     c
+}
+
+pub fn is_shadowed(w: &World, p: Point) -> bool {
+    let v = w.lights[0].position - p;
+    let distance = magnitude(v);
+    let direction = normalize(v);
+    let r = ray(p, direction);
+
+    let mut intersections = intersect_world(w, r);
+    let h = hit(&mut intersections[..]);
+
+    match h {
+        | Some(intersection) => intersection.t < distance,
+        | None => false,
+    }
 }
 
 fn append_string_or_new_line(c: f32, line_len: usize) -> (String, usize, bool) {

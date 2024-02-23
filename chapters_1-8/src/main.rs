@@ -163,8 +163,8 @@ fn chapter7() {
     let mut f = File::create("world-shadowed.ppm").unwrap();
     f.write_all(sphere_data.as_bytes()).unwrap();
     f.sync_all().unwrap();
-
 }
+
 fn main() {
     chapter7();
     println!("Done");

@@ -2,24 +2,25 @@ use ray_tracer_challenge::*;
 
 #[cfg(test)]
 mod intersection {
+    use std::ops::Deref;
     use super::*;
 
     #[test]
     /// An intersection encapsulates t and object
     fn an_intersection_encapsulates_t_and_object() {
         let s = sphere();
-        let i = intersection(3.5, &s);
+        let i = intersection(3.5, s.deref());
 
         assert_eq!(i.t, 3.5);
-        assert_eq!(*i.object, s);
+        assert_eq!(i.object.id(), s.id());
     }
 
     #[test]
     /// Aggregating intersections
     fn aggregating_intersections() {
         let s = sphere();
-        let i1 = intersection(1.0, &s);
-        let i2 = intersection(2.0, &s);
+        let i1 = intersection(1.0, s.deref());
+        let i2 = intersection(2.0, s.deref());
 
         let xs = [i1, i2];
 
@@ -34,23 +35,23 @@ mod intersection {
         let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
         let s = sphere();
 
-        let xs = intersect(&s, r);
+        let xs = s.intersect(r);
 
         assert_eq!(xs.len(), 2);
-        assert_eq!(*xs[0].object, s);
-        assert_eq!(*xs[1].object, s);
+        assert_eq!(xs[0].object.id(), s.id());
+        assert_eq!(xs[1].object.id(), s.id());
     }
 
     #[test]
     /// The hit, when all intersections have positive t
     fn hit_when_all_intersections_have_positive_t() {
         let s = sphere();
-        let i1 = intersection(1.0, &s);
-        let i2 = intersection(2.0, &s);
+        let i1 = intersection(1.0, s.deref());
+        let i2 = intersection(2.0, s.deref());
 
-        let mut xs = [i2, i1];
+        let mut xs = [i2, i1].to_vec();
 
-        let i = hit(&mut xs[..]);
+        let i = hit(&mut xs);
 
         assert_eq!(i.unwrap(), i1);
     }
@@ -59,12 +60,12 @@ mod intersection {
     /// The hit, when some intersections have negative t
     fn hit_when_some_intersections_have_negative_t() {
         let s = sphere();
-        let i1 = intersection(-1.0, &s);
-        let i2 = intersection(1.0, &s);
+        let i1 = intersection(-1.0, s.deref());
+        let i2 = intersection(1.0, s.deref());
 
-        let mut xs = [i2, i1];
+        let mut xs = [i2, i1].to_vec();
 
-        let i = hit(&mut xs[..]);
+        let i = hit(&mut xs);
 
         assert_eq!(i.unwrap(), i2);
     }
@@ -73,12 +74,12 @@ mod intersection {
     /// The hit, when all intersections have negative t
     fn hit_when_all_intersections_have_negative_t() {
         let s = sphere();
-        let i1 = intersection(-2.0, &s);
-        let i2 = intersection(-1.0, &s);
+        let i1 = intersection(-2.0, s.deref());
+        let i2 = intersection(-1.0, s.deref());
 
-        let mut xs = [i2, i1];
+        let mut xs = [i2, i1].to_vec();
 
-        let i = hit(&mut xs[..]);
+        let i = hit(&mut xs);
 
         assert_eq!(i, None);
     }
@@ -87,14 +88,14 @@ mod intersection {
     /// The hit is always the lowest non-negative intersection
     fn hit_is_always_the_lowest_non_negative_intersection() {
         let s = sphere();
-        let i1 = intersection(5.0, &s);
-        let i2 = intersection(7.0, &s);
-        let i3 = intersection(-3.0, &s);
-        let i4 =intersection(2.0, &s);
+        let i1 = intersection(5.0, s.deref());
+        let i2 = intersection(7.0, s.deref());
+        let i3 = intersection(-3.0, s.deref());
+        let i4 =intersection(2.0, s.deref());
 
-        let mut xs  = [i1, i2, i3, i4];
+        let mut xs  = [i1, i2, i3, i4].to_vec();
 
-        let i = hit(&mut xs[..]);
+        let i = hit(&mut xs);
 
         assert_eq!(i.unwrap(), i4)
     }
@@ -104,12 +105,12 @@ mod intersection {
     fn precomputing_the_state_of_an_intersection() {
         let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
         let shape = sphere();
-        let i = intersection(4.0, &shape);
+        let i = intersection(4.0, shape.deref());
 
         let comps = prepare_computations(i, r);
 
         assert_eq!(comps.t, i.t);
-        assert_eq!(comps.object, i.object);
+        assert_eq!(comps.object.id(), i.object.id());
         assert_eq!(comps.point, point(0.0, 0.0, -1.0));
         assert_eq!(comps.eye_v, vector(0.0, 0.0, -1.0));
         assert_eq!(comps.normal_v, vector(0.0, 0.0, -1.0));
@@ -120,7 +121,7 @@ mod intersection {
     fn hit_when_an_intersection_occurs_on_the_outside() {
         let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
         let shape = sphere();
-        let i = intersection(4.0, &shape);
+        let i = intersection(4.0, shape.deref());
 
         let comps = prepare_computations(i, r);
         assert!(!comps.inside)
@@ -131,7 +132,7 @@ mod intersection {
     fn hit_when_an_intersection_occurs_on_the_inside() {
         let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 0.0, 1.0));
         let shape = sphere();
-        let i = intersection(1.0, &shape);
+        let i = intersection(1.0, shape.deref());
 
         let comps = prepare_computations(i, r);
         assert_eq!(comps.point, point(0.0, 0.0, 1.0));
@@ -147,7 +148,7 @@ mod intersection {
         let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
         let shape = w.objects.first().unwrap();
 
-        let i = intersection(4.0, shape);
+        let i = intersection(4.0, shape.deref());
 
         let comps = prepare_computations(i, r);
         let c = shade_hit(&w, &comps);
@@ -163,7 +164,7 @@ mod intersection {
         let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 0.0, 1.0));
         let shape = &w.objects[1];
 
-        let i = intersection(0.5, shape);
+        let i = intersection(0.5, shape.deref());
 
         let comps = prepare_computations(i, r);
         let c = shade_hit(&w, &comps);
@@ -195,13 +196,15 @@ mod intersection {
     /// The color with an intersection behind the ray
     fn color_with_an_intersection_behind_the_ray() {
         let mut w = default_world();
-        w.objects[0].material.ambient = 1.0;
-        w.objects[1].material.ambient = 1.0;
+        let mut m = material();
+        m.ambient = 1.0;
+        w.objects[0].set_material(m.clone());
+        w.objects[1].set_material(m.clone());
 
         let r = ray(point(0.0, 0.0, 0.75), vector(0.0, 0.0, -1.0));
         let c = color_at(&w, r);
 
-        assert_eq!(c, w.objects[1].material.color);
+        assert_eq!(c, w.objects[1].material().color);
     }
 
     #[test]
@@ -209,9 +212,9 @@ mod intersection {
     fn hit_should_offset_the_point() {
         let r = ray(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
         let mut shape = sphere();
-        shape.transform = translation(0.0, 0.0, 1.0);
+        shape.set_transform(translation(0.0, 0.0, 1.0));
 
-        let i = intersection(5.0, &shape);
+        let i = intersection(5.0, shape.deref());
 
         let comps = prepare_computations(i, r);
 

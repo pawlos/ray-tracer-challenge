@@ -1,8 +1,36 @@
 use std::cmp::Ordering;
+use std::fmt::{Debug, Formatter};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::vec;
+use uuid::Uuid;
 
 pub const EPS: f32 = 0.0001;
+
+pub trait Shape {
+    fn id(&self) -> Uuid;
+    fn transform(&self) -> Matrix;
+    fn material(&self) -> Material;
+    fn set_transform(&mut self, transform: Matrix);
+    fn set_material(&mut self, material: Material);
+
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection>;
+
+    fn local_normal_at(&self, point: Point) -> Vector;
+
+    fn intersect(&self, ray: Ray) -> Vec<Intersection> {
+        let local_ray = transform(ray, inverse(&self.transform()));
+        self.local_intersect(local_ray)
+    }
+
+    fn normal_at(&self, point: Point) -> Vector {
+        let local_point = inverse(&self.transform()) * point;
+        let local_normal = self.local_normal_at(local_point);
+        let mut world_normal = transpose(inverse(&self.transform())) * local_normal;
+        world_normal.w = 0.0;
+
+        normalize(world_normal)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Tuple {
@@ -31,7 +59,7 @@ pub struct Matrix {
     elems: Vec<f32>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Ray {
     pub origin: Point,
     pub direction: Vector
@@ -39,15 +67,138 @@ pub struct Ray {
 
 #[derive(Debug)]
 pub struct Sphere {
-    id: uuid::Uuid,
+    id: Uuid,
     pub transform: Matrix,
     pub material: Material,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
+pub struct Plane {
+    id: Uuid,
+    pub transform: Matrix,
+    pub material: Material,
+}
+
+#[derive(Debug)]
+pub struct TestShape {
+    id: Uuid,
+    pub transform: Matrix,
+    pub saved_ray: Ray,
+    pub material: Material,
+}
+
+impl Shape for Sphere {
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn material(&self) -> Material {
+        self.material.clone()
+    }
+
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn set_material(&mut self, material: Material) {
+        self.material = material;
+    }
+
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
+        let sphere_to_ray = ray.origin - point(0.0, 0.0, 0.0);
+
+        let a = dot(ray.direction, ray.direction);
+        let b = 2.0 * dot(ray.direction, sphere_to_ray);
+        let c = dot(sphere_to_ray, sphere_to_ray) - 1.0;
+
+        let discriminant = b*b - 4.0*a*c;
+
+        if discriminant < 0.0 {
+            return vec![];
+        }
+
+        let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
+        let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
+
+        [intersection(t1, self), intersection(t2, self)].to_vec()
+    }
+
+    fn local_normal_at(&self, point: Point) -> Vector {
+        vector(point.x, point.y, point.z)
+    }
+}
+
+impl Shape for Plane {
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn material(&self) -> Material {
+        self.material.clone()
+    }
+
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn set_material(&mut self, material: Material) {
+        self.material = material;
+    }
+
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
+        match ray.direction.y.abs() < EPS {
+            | true => [].to_vec(),
+            | _ => [intersection(-ray.origin.y / ray.direction.y, self)].to_vec()
+        }
+    }
+
+    fn local_normal_at(&self, _point: Point) -> Vector {
+        vector(0.0, 1.0, 0.0)
+    }
+}
+
+impl Shape for TestShape {
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn material(&self) -> Material {
+        self.material.clone()
+    }
+
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn set_material(&mut self, material: Material) {
+        self.material = material;
+    }
+
+    fn local_intersect(&self, _ray: Ray) -> Vec<Intersection> {
+        [].to_vec()
+    }
+
+    fn local_normal_at(&self, point: Point) -> Vector {
+        vector(point.x, point.y, point.z)
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct Intersection<'a> {
     pub t: f32,
-    pub object: &'a Sphere, //for now only Sphere
+    pub object: &'a dyn Shape,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -66,13 +217,13 @@ pub struct Material {
 }
 
 pub struct World {
-    pub objects: Vec<Sphere>,
+    pub objects: Vec<Box<dyn Shape>>,
     pub lights: Vec<PointLight>,
 }
 
 pub struct Computation<'a> {
     pub t: f32,
-    pub object: &'a Sphere,
+    pub object: &'a dyn Shape,
     pub point: Point,
     pub eye_v: Vector,
     pub normal_v: Vector,
@@ -331,7 +482,13 @@ impl PartialEq for Matrix {
 
 impl<'a> PartialEq for Intersection<'a> {
     fn eq(&self, other: &Self) -> bool {
-        self.t == other.t && self.object.id == other.object.id
+        self.t == other.t && self.object.id() == other.object.id()
+    }
+}
+
+impl<'a> Debug for Intersection<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("Intersection at {:?} for {:?}", self.t, self.object.id()).as_str())
     }
 }
 
@@ -576,36 +733,34 @@ pub fn position(ray: Ray, t: f32) -> Point {
     ray.origin + ray.direction * t
 }
 
-pub fn sphere() -> Sphere {
-    Sphere { id: uuid::Uuid::new_v4(), transform: Matrix::identity4x4(), material: material() }
+pub fn sphere() -> Box<dyn Shape> {
+    Box::new(Sphere {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4(),
+        material: material()})
 }
 
-pub fn intersection(t:f32, object: &Sphere) -> Intersection {
+pub fn plane() -> Box<dyn Shape> {
+    Box::new(Plane {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4(),
+        material: material()})
+}
+
+pub fn test_shape() -> Box<dyn Shape> {
+    Box::new(TestShape {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4(),
+        material: material(),
+        saved_ray: ray(point(0.0, 0.0, 0.0), vector(0.0,0.0,0.0)) })
+}
+
+pub fn intersection(t:f32, object: &dyn Shape) -> Intersection {
     Intersection { t, object }
 }
 
-pub fn intersect(s: &Sphere, r: Ray) -> Vec<Intersection> {
-    let r2 = transform(r, inverse(&s.transform));
-    let sphere_to_ray = r2.origin - point(0.0, 0.0, 0.0);
-
-    let a = dot(r2.direction, r2.direction);
-    let b = 2.0 * dot(r2.direction, sphere_to_ray);
-    let c = dot(sphere_to_ray, sphere_to_ray) - 1.0;
-
-    let discriminant = b*b - 4.0*a*c;
-
-    if discriminant < 0.0 {
-        return vec![];
-    }
-
-    let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
-    let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
-
-    [intersection(t1, s), intersection(t2, s)].to_vec()
-}
-
 pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
-    let mut intersections = w.objects.iter().flat_map(|o| intersect(o, r))
+    let mut intersections = w.objects.iter().flat_map(|o| o.intersect(r))
         .collect::<Vec<_>>();
     intersections.sort_by(|i, j|
         if i.t <= j.t {
@@ -619,7 +774,7 @@ pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
 
 pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
     let point = position(r, i.t);
-    let mut normal_v = normal_at(i.object, point);
+    let mut normal_v = i.object.normal_at(point);
     let inside = dot(normal_v, -r.direction) < 0.0;
     if inside {
         normal_v = -normal_v;
@@ -631,7 +786,7 @@ pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
         eye_v: -r.direction,
         inside,
         normal_v,
-        over_point: point + normal_v * EPS * 100.0
+        over_point: point + normal_v * EPS
     }
 }
 
@@ -647,18 +802,6 @@ pub fn hit<'a>(xs: &'a mut Vec<Intersection>) -> Option<Intersection<'a>> {
 
 pub fn transform(r: Ray, m: Matrix) -> Ray {
     Ray {origin: m.clone()*r.origin, direction: m*r.direction }
-}
-
-pub fn set_transform(s: &mut Sphere, t: Matrix) {
-    s.transform = t;
-}
-
-pub fn normal_at(s: &Sphere, p: Point) -> Vector {
-    let object_point = inverse(&s.transform) * p;
-    let object_normal = object_point - point(0.0, 0.0, 0.0);
-    let mut  world_normal = transpose(inverse(&s.transform)) * object_normal;
-    world_normal.w = 0.0;
-    normalize(world_normal)
 }
 
 pub fn reflect(i: Vector, normal: Vector) -> Vector {
@@ -719,19 +862,20 @@ pub fn default_world() -> World {
     let light = point_light(point(-10.0, 10.0, -10.0), color(1.0, 1.0, 1.0));
 
     let mut s1 = sphere();
-    s1.material = material();
-    s1.material.color = color(0.8, 1.0, 0.6);
-    s1.material.diffuse = 0.7;
-    s1.material.specular = 0.2;
+    let mut m = material();
+    m.color = color(0.8, 1.0, 0.6);
+    m.diffuse = 0.7;
+    m.specular = 0.2;
+    s1.set_material(m);
 
     let mut s2 = sphere();
-    s2.transform = scaling(0.5, 0.5, 0.5);
+    s2.set_transform(scaling(0.5, 0.5, 0.5));
     World { objects: vec![s1, s2], lights: vec![light] }
 }
 
 pub fn shade_hit(w: &World, c: &Computation) -> Color {
     let is_shadowed = is_shadowed(w, c.over_point);
-    lightning(&c.object.material, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
+    lightning(&c.object.material(), &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
 }
 
 pub fn color_at(w: &World, r: Ray) -> Color {

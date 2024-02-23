@@ -43,7 +43,7 @@ fn chapter5() {
 
             let r = ray(ray_origin, normalize(position - ray_origin));
 
-            let mut xs = intersect(&shape, r);
+            let mut xs = shape.intersect(r);
 
             match hit(&mut xs) {
                 | Some(_) => canvas.write_pixel(x ,y, color),
@@ -69,8 +69,9 @@ fn chapter6() {
 
     let mut canvas = Canvas::new(canvas_pixels, canvas_pixels);
     let mut shape = sphere();
-    shape.material = material();
-    shape.material.color = color(1.0, 0.2, 1.0);
+    let mut material = material();
+    material.color = color(1.0, 0.2, 1.0);
+    shape.set_material(material);
 
     let light_position = point(-10.0, 10.0, -10.0);
     let light_color = color(1.0, 1.0, 1.0);
@@ -85,14 +86,14 @@ fn chapter6() {
 
             let r = ray(ray_origin, normalize(p - ray_origin));
 
-            let mut xs = intersect(&shape, r);
+            let mut xs = shape.intersect(r);
 
             match hit(&mut xs) {
                 | Some(hit) => {
                     let point = position(r, hit.t);
-                    let normal = normal_at(hit.object, point);
+                    let normal = hit.object.normal_at(point);
                     let eye = r.direction;
-                    let color = lightning(&hit.object.material, &light, point, eye, normal, false);
+                    let color = lightning(&hit.object.material(), &light, point, eye, normal, false);
                     canvas.write_pixel(x ,y, color)
                 },
                 _ => {}
@@ -105,49 +106,48 @@ fn chapter6() {
     f.sync_all().unwrap();
 }
 
-fn chapter7() {
-    let mut floor = sphere();
-    floor.transform = scaling(10.0, 0.01, 10.0);
-    floor.material = material();
-    floor.material.color = color(1.0, 0.9, 0.9);
-    floor.material.specular = 0.0;
+fn chapter8() {
+    let mut floor = plane();
+    floor.set_transform(translation(0.0, 0.5, 0.0));
 
-    let mut left_wall = sphere();
-    left_wall.transform = translation(0.0, 0.0, 5.0) * rotation_y(-PI/4.0) * rotation_x(PI/2.0) *
-                          scaling(10.0, 0.01, 10.0);
-    left_wall.material = floor.material.clone();
-
-    let mut right_wall = sphere();
-    right_wall.transform = translation(0.0, 0.0, 5.0) * rotation_y(PI/4.0) * rotation_x(PI/2.0) *
-                           scaling(10.0, 0.01, 10.0);
-    right_wall.material = floor.material.clone();
+    let mut mat = material();
+    mat.color = color(1.0, 0.9, 0.9);
+    mat.specular = 0.0;
+    floor.set_material(mat);
 
     let mut middle = sphere();
-    middle.transform = translation(-0.5, 1.0, 0.5);
-    middle.material = material();
-    middle.material.color = color(0.1, 1.0, 0.5);
-    middle.material.diffuse = 0.7;
-    middle.material.specular = 0.3;
+    middle.set_transform(translation(-0.5, 1.0, 0.5));
+
+    let mut mat = material();
+    mat.color = color(0.1, 1.0, 0.5);
+    mat.diffuse = 0.7;
+    mat.specular = 0.3;
+    middle.set_material(mat);
+
 
     let mut right = sphere();
-    right.transform = translation(1.5, 0.5, -0.5) * scaling(0.5, 0.5, 0.5);
-    right.material = material();
-    right.material.color = color(0.5, 1.0, 0.1);
-    right.material.diffuse = 0.7;
-    right.material.specular = 0.3;
+    right.set_transform(translation(1.5, 0.5, -0.5) * scaling(0.5, 0.5, 0.5));
+
+    let mut mat = material();
+    mat.color = color(0.5, 1.0, 0.1);
+    mat.diffuse = 0.7;
+    mat.specular = 0.3;
+    right.set_material(mat);
 
     let mut left = sphere();
-    left.transform = translation(-1.5, 0.33, -0.75) * scaling(0.33, 0.33, 0.33);
-    left.material.color = color(1.0, 0.8, 0.1);
-    left.material.diffuse = 0.7;
-    left.material.specular = 0.3;
+    left.set_transform(translation(-1.5, 0.33, -0.75) * scaling(0.33, 0.33, 0.33));
+
+    let mut mat = material();
+    mat.color = color(1.0, 0.8, 0.1);
+    mat.diffuse = 0.7;
+    mat.specular = 0.3;
+    left.set_material(mat);
+
 
     let mut world = world();
     world.lights.push(point_light(point(-10.0, 10.0, -10.0), color(1.0, 1.0, 1.0)));
 
     world.objects.push(floor);
-    world.objects.push(left_wall);
-    world.objects.push(right_wall);
     world.objects.push(middle);
     world.objects.push(right);
     world.objects.push(left);
@@ -160,12 +160,13 @@ fn chapter7() {
 
     let canvas = render(&camera, &world);
     let sphere_data = canvas_to_ppm(canvas);
-    let mut f = File::create("world-shadowed.ppm").unwrap();
+    let mut f = File::create("world-with-plane.ppm").unwrap();
     f.write_all(sphere_data.as_bytes()).unwrap();
     f.sync_all().unwrap();
-
 }
+
+
 fn main() {
-    chapter7();
+    chapter8();
     println!("Done");
 }

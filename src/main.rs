@@ -93,7 +93,7 @@ fn chapter6() {
                     let point = position(r, hit.t);
                     let normal = hit.object.normal_at(point);
                     let eye = r.direction;
-                    let color = lightning(&hit.object.material(), &light, point, eye, normal, false);
+                    let color = lightning(&hit.object.material(), hit.object, &light, point, eye, normal, false);
                     canvas.write_pixel(x ,y, color)
                 },
                 _ => {}
@@ -108,7 +108,10 @@ fn chapter6() {
 
 fn chapter8() {
     let mut floor = plane();
-    floor.set_transform(translation(0.0, 0.5, 0.0));
+    floor.set_transform(translation(0.0, 0.0, 0.0));
+
+    let mut back = plane();
+    back.set_transform(rotation_x(PI/2.0) * translation(0.0, 0.0, 15.0));
 
     let mut mat = material();
     mat.color = color(1.0, 0.9, 0.9);
@@ -145,14 +148,15 @@ fn chapter8() {
 
 
     let mut world = world();
-    world.lights.push(point_light(point(-10.0, 10.0, -10.0), color(1.0, 1.0, 1.0)));
+    world.lights.push(point_light(point(-10.0, 3.0, -10.0), color(1.0, 1.0, 1.0)));
 
     world.objects.push(floor);
+    world.objects.push(back);
     world.objects.push(middle);
     world.objects.push(right);
     world.objects.push(left);
 
-    let mut camera = camera(800, 600, PI/3.0);
+    let mut camera = camera(160, 120, PI/3.0);
     camera.transform = view_transformation(
         point(0.0, 1.5, -5.0),
         point(0.0, 1.0, 0.0),

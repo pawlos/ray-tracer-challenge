@@ -87,6 +87,13 @@ pub struct TestShape {
     pub material: Material,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct StripePattern {
+    pub a: Color,
+    pub b: Color,
+    pub transform: Matrix,
+}
+
 impl Shape for Sphere {
     fn id(&self) -> Uuid {
         self.id
@@ -213,7 +220,8 @@ pub struct Material {
     pub ambient: f32,
     pub diffuse: f32,
     pub specular: f32,
-    pub shininess: f32
+    pub shininess: f32,
+    pub pattern: Option<StripePattern>,
 }
 
 pub struct World {
@@ -819,11 +827,17 @@ pub fn material() -> Material {
         diffuse: 0.9,
         specular: 0.9,
         shininess: 200.0,
+        pattern: None
     }
 }
 
-pub fn lightning(m: &Material, l: &PointLight, point: Point, eye_v: Vector, normal_v: Vector, in_shadow: bool) -> Color {
-    let effective_color = m.color * l.intensity;
+pub fn lightning(m: &Material, object: &dyn Shape, l: &PointLight, point: Point, eye_v: Vector, normal_v: Vector, in_shadow: bool) -> Color {
+
+    let color_for_lightning = match &m.pattern {
+        | None => m.color,
+        | Some(p) => stripe_at_object(p, object, point)
+    };
+    let effective_color = color_for_lightning * l.intensity;
 
     let light_v = normalize(l.position - point);
 
@@ -873,9 +887,32 @@ pub fn default_world() -> World {
     World { objects: vec![s1, s2], lights: vec![light] }
 }
 
+pub fn stripe_pattern(white: Color, black: Color) -> StripePattern {
+    StripePattern { a: white, b: black, transform: Matrix::identity4x4() }
+}
+
+pub fn stripe_at(pattern: &StripePattern, point: Point) -> Color {
+    if point.x.rem_euclid(2.0).floor() == 0.0 {
+        pattern.a
+    } else {
+        pattern.b
+    }
+}
+
+pub fn stripe_at_object(pattern: &StripePattern, object: &dyn Shape, point: Point) -> Color {
+    let object_point= inverse(&object.transform()) * point;
+    let pattern_point = inverse(&pattern.transform) * object_point;
+
+    stripe_at(pattern, pattern_point)
+}
+
+pub fn set_pattern_transformation(pattern: &mut StripePattern, transform: Matrix) {
+    pattern.transform = transform;
+}
+
 pub fn shade_hit(w: &World, c: &Computation) -> Color {
     let is_shadowed = is_shadowed(w, c.over_point);
-    lightning(&c.object.material(), &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
+    lightning(&c.object.material(), c.object, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
 }
 
 pub fn color_at(w: &World, r: Ray) -> Color {

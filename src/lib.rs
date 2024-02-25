@@ -113,6 +113,12 @@ pub struct TestPattern {
     transform: Matrix,
 }
 
+pub struct GradientPattern {
+    a: Color,
+    b: Color,
+    transform: Matrix,
+}
+
 impl Pattern for StripePattern {
     fn set_transform(&mut self, transform: Matrix) {
         self.transform = transform;
@@ -142,6 +148,24 @@ impl Pattern for TestPattern {
 
     fn pattern_at(&self, point: Point) -> Color {
         color(point.x, point.y, point.z)
+    }
+}
+
+impl Pattern for GradientPattern {
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn pattern_at(&self, point: Point) -> Color {
+        let v_r = self.a.red + (self.b.red - self.a.red)*(point.x - point.x.floor());
+        let v_g = self.a.green + (self.b.green - self.a.green)*(point.x - point.x.floor());
+        let v_b = self.a.blue + (self.b.blue - self.a.blue)*(point.x - point.x.floor());
+        
+        color(v_r, v_g, v_b)
     }
 }
 
@@ -964,6 +988,14 @@ pub fn stripe_pattern(white: Color, black: Color) -> StripePattern {
 
 pub fn test_pattern() -> TestPattern {
     TestPattern { transform: Matrix::identity4x4() }
+}
+
+pub fn gradient_pattern(white: Color, black: Color) -> GradientPattern {
+    GradientPattern {
+        a: white,
+        b: black,
+        transform: Matrix::identity4x4() 
+    }
 }
 
 pub fn set_pattern_transformation(pattern: &mut StripePattern, transform: Matrix) {

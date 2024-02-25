@@ -114,4 +114,15 @@ mod patterns_tests {
 
         assert_eq!(pattern.transform(), translation(1.0, 2.0, 3.0));
     }
+
+    #[test]
+    /// A gradient linearly interpolates between colors
+    fn gradient_linearly_interpolates_between_colors() {
+        let (white, black) = setup();
+        let pattern = gradient_pattern(white, black);
+
+        assert_eq!(pattern.pattern_at(point(0.25, 0.0, 0.0)), color(0.75, 0.75, 0.75));
+        assert_eq!(pattern.pattern_at(point(0.5, 0.0, 0.0)), color(0.5, 0.5, 0.5));
+        assert_eq!(pattern.pattern_at(point(0.75, 0.0, 0.0)), color(0.25, 0.25, 0.25));
+    }
 }

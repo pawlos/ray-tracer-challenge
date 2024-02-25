@@ -196,10 +196,12 @@ mod intersection {
     /// The color with an intersection behind the ray
     fn color_with_an_intersection_behind_the_ray() {
         let mut w = default_world();
-        let mut m = material();
-        m.ambient = 1.0;
-        w.objects[0].set_material(m.clone());
-        w.objects[1].set_material(m.clone());
+        let mut m1 = material();
+        m1.ambient = 1.0;
+        w.objects[0].set_material(m1);
+        let mut m2 = material();
+        m2.ambient = 1.0;
+        w.objects[1].set_material(m2);
 
         let r = ray(point(0.0, 0.0, 0.75), vector(0.0, 0.0, -1.0));
         let c = color_at(&w, r);

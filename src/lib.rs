@@ -9,7 +9,7 @@ pub const EPS: f32 = 0.0001;
 pub trait Shape {
     fn id(&self) -> Uuid;
     fn transform(&self) -> Matrix;
-    fn material(&self) -> Material;
+    fn material(&self) -> &Material;
     fn set_transform(&mut self, transform: Matrix);
     fn set_material(&mut self, material: Material);
 
@@ -29,6 +29,21 @@ pub trait Shape {
         world_normal.w = 0.0;
 
         normalize(world_normal)
+    }
+}
+
+pub trait Pattern {
+    fn set_transform(&mut self, transform: Matrix);
+
+    fn transform(&self) -> Matrix;
+
+    fn pattern_at(&self, point: Point) -> Color;
+
+    fn pattern_at_shape(&self, object: &dyn Shape, point: Point) -> Color
+    {
+        let object_point = inverse(&object.transform()) * point;
+        let pattern_point = inverse(&self.transform()) * object_point;
+        self.pattern_at(pattern_point)
     }
 }
 
@@ -94,6 +109,42 @@ pub struct StripePattern {
     pub transform: Matrix,
 }
 
+pub struct TestPattern {
+    transform: Matrix,
+}
+
+impl Pattern for StripePattern {
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn pattern_at(&self, point: Point) -> Color {
+        if point.x.rem_euclid(2.0).floor() == 0.0 {
+            self.a
+        } else {
+            self.b
+        }
+    }
+}
+
+impl Pattern for TestPattern {
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn pattern_at(&self, point: Point) -> Color {
+        color(point.x, point.y, point.z)
+    }
+}
+
 impl Shape for Sphere {
     fn id(&self) -> Uuid {
         self.id
@@ -103,8 +154,8 @@ impl Shape for Sphere {
         self.transform.clone()
     }
 
-    fn material(&self) -> Material {
-        self.material.clone()
+    fn material(&self) -> &Material {
+        &self.material
     }
 
     fn set_transform(&mut self, transform: Matrix) {
@@ -148,8 +199,8 @@ impl Shape for Plane {
         self.transform.clone()
     }
 
-    fn material(&self) -> Material {
-        self.material.clone()
+    fn material(&self) -> &Material {
+        &self.material
     }
 
     fn set_transform(&mut self, transform: Matrix) {
@@ -181,8 +232,8 @@ impl Shape for TestShape {
         self.transform.clone()
     }
 
-    fn material(&self) -> Material {
-        self.material.clone()
+    fn material(&self) -> &Material {
+        &self.material
     }
 
     fn set_transform(&mut self, transform: Matrix) {
@@ -214,14 +265,13 @@ pub struct PointLight {
     pub intensity: Color,
 }
 
-#[derive(Clone, Debug, PartialEq)]
 pub struct Material {
     pub color: Color,
     pub ambient: f32,
     pub diffuse: f32,
     pub specular: f32,
     pub shininess: f32,
-    pub pattern: Option<StripePattern>,
+    pub pattern: Option<Box<dyn Pattern>>,
 }
 
 pub struct World {
@@ -494,16 +544,37 @@ impl<'a> PartialEq for Intersection<'a> {
     }
 }
 
+impl PartialEq for dyn Pattern {
+    fn eq(&self, other: &Self) -> bool {
+        self.transform() == other.transform()
+    }
+}
+
+impl PartialEq for Material {
+    fn eq(&self, other: &Self) -> bool {
+        self.color == other.color &&
+            self.specular == other.specular &&
+            self.diffuse == other.diffuse &&
+            self.ambient == other.ambient &&
+            self.pattern == other.pattern
+    }
+}
+
 impl<'a> Debug for Intersection<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("Intersection at {:?} for {:?}", self.t, self.object.id()).as_str())
     }
 }
 
-impl PartialEq for Sphere {
+impl Debug for Material {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("Material - color: {:?}, specular: {:?}", self.color, self.specular).as_str())
+    }
+}
+
+impl<'a> PartialEq for Sphere {
     fn eq(&self, other: &Self) -> bool {
-        self.material == other.material &&
-        self.transform == other.transform
+        self.id() == other.id()
     }
 }
 pub fn point(x: f32, y: f32, z: f32) -> Point {
@@ -763,11 +834,11 @@ pub fn test_shape() -> Box<dyn Shape> {
         saved_ray: ray(point(0.0, 0.0, 0.0), vector(0.0,0.0,0.0)) })
 }
 
-pub fn intersection(t:f32, object: &dyn Shape) -> Intersection {
+pub fn intersection<'a>(t:f32, object: &'a dyn Shape) -> Intersection<'a> {
     Intersection { t, object }
 }
 
-pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
+pub fn intersect_world<'a>(w: &'a World, r: Ray) -> Vec<Intersection<'a>> {
     let mut intersections = w.objects.iter().flat_map(|o| o.intersect(r))
         .collect::<Vec<_>>();
     intersections.sort_by(|i, j|
@@ -780,7 +851,7 @@ pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
     intersections
 }
 
-pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
+pub fn prepare_computations<'a>(i: Intersection<'a>, r: Ray) -> Computation<'a> {
     let point = position(r, i.t);
     let mut normal_v = i.object.normal_at(point);
     let inside = dot(normal_v, -r.direction) < 0.0;
@@ -798,7 +869,7 @@ pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
     }
 }
 
-pub fn hit<'a>(xs: &'a mut Vec<Intersection>) -> Option<Intersection<'a>> {
+pub fn hit<'a>(xs: &mut Vec<Intersection<'a>>) -> Option<Intersection<'a>> {
     xs.sort_by(|i, j| i.t.total_cmp(&j.t));
 
     let filtered = xs.iter().filter(|i| i.t >= 0.0).take(1).collect::<Vec<_>>();
@@ -833,9 +904,9 @@ pub fn material() -> Material {
 
 pub fn lightning(m: &Material, object: &dyn Shape, l: &PointLight, point: Point, eye_v: Vector, normal_v: Vector, in_shadow: bool) -> Color {
 
-    let color_for_lightning = match &m.pattern {
+    let color_for_lightning = match m.pattern.as_deref() {
         | None => m.color,
-        | Some(p) => stripe_at_object(p, object, point)
+        | Some(p) => p.pattern_at_shape(object, point)
     };
     let effective_color = color_for_lightning * l.intensity;
 
@@ -888,36 +959,26 @@ pub fn default_world() -> World {
 }
 
 pub fn stripe_pattern(white: Color, black: Color) -> StripePattern {
-    StripePattern { a: white, b: black, transform: Matrix::identity4x4() }
+   StripePattern { a: white, b: black, transform: Matrix::identity4x4() }
 }
 
-pub fn stripe_at(pattern: &StripePattern, point: Point) -> Color {
-    if point.x.rem_euclid(2.0).floor() == 0.0 {
-        pattern.a
-    } else {
-        pattern.b
-    }
-}
-
-pub fn stripe_at_object(pattern: &StripePattern, object: &dyn Shape, point: Point) -> Color {
-    let object_point= inverse(&object.transform()) * point;
-    let pattern_point = inverse(&pattern.transform) * object_point;
-
-    stripe_at(pattern, pattern_point)
+pub fn test_pattern() -> TestPattern {
+    TestPattern { transform: Matrix::identity4x4() }
 }
 
 pub fn set_pattern_transformation(pattern: &mut StripePattern, transform: Matrix) {
     pattern.transform = transform;
 }
 
-pub fn shade_hit(w: &World, c: &Computation) -> Color {
+pub fn shade_hit<'a>(w: &'a World, c: &Computation) -> Color {
     let is_shadowed = is_shadowed(w, c.over_point);
     lightning(&c.object.material(), c.object, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
 }
 
-pub fn color_at(w: &World, r: Ray) -> Color {
-    let mut intersections = intersect_world(w, r);
-    let hit = hit(&mut intersections);
+pub fn color_at<'a>(w: &'a World, r: Ray) -> Color {
+    let mut intersections: Vec<Intersection<'a>> = intersect_world(w, r);
+
+    let hit= hit(&mut intersections);
     match hit
     {
         | None => color(0.0, 0.0, 0.0),
@@ -970,7 +1031,7 @@ pub fn ray_for_pixel(c: &Camera, px: i32, py: i32) -> Ray {
     Ray { origin, direction }
 }
 
-pub fn render(camera: &Camera, world: &World) -> Canvas {
+pub fn render<'a>(camera: &Camera, world: &'a World) -> Canvas {
     let mut c = Canvas::new(camera.hsize, camera.vsize);
     for y in 0..camera.vsize {
         for x in 0..camera.hsize {
@@ -982,7 +1043,7 @@ pub fn render(camera: &Camera, world: &World) -> Canvas {
     c
 }
 
-pub fn is_shadowed(w: &World, p: Point) -> bool {
+pub fn is_shadowed<'a>(w: &'a World, p: Point) -> bool {
     let v = w.lights[0].position - p;
     let distance = magnitude(v);
     let direction = normalize(v);

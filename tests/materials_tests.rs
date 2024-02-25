@@ -112,7 +112,7 @@ mod materials {
     fn lightning_with_a_pattern_applied() {
         let (mut m, _) = setup();
         let sphere = sphere();
-        m.pattern = Some(stripe_pattern(color(1.0, 1.0, 1.0), color(0.0, 0.0, 0.0)));
+        m.pattern = Some(Box::new(stripe_pattern(color(1.0, 1.0, 1.0), color(0.0, 0.0, 0.0))));
         m.ambient = 1.0;
         m.diffuse = 0.0;
         m.specular = 0.0;

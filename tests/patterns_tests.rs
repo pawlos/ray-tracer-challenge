@@ -26,9 +26,9 @@ mod patterns_tests {
 
         let pattern = stripe_pattern(white, black);
 
-        assert_eq!(stripe_at(&pattern, point(0.0, 0.0, 0.0)), white);
-        assert_eq!(stripe_at(&pattern, point(0.0, 1.0, 0.0)), white);
-        assert_eq!(stripe_at(&pattern, point(0.0, 2.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 1.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 2.0, 0.0)), white);
     }
 
     #[test]
@@ -38,9 +38,9 @@ mod patterns_tests {
 
         let pattern = stripe_pattern(white, black);
 
-        assert_eq!(stripe_at(&pattern, point(0.0, 0.0, 0.0)), white);
-        assert_eq!(stripe_at(&pattern, point(0.0, 0.0, 1.0)), white);
-        assert_eq!(stripe_at(&pattern, point(0.0, 0.0, 2.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 1.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 2.0)), white);
     }
 
     #[test]
@@ -50,12 +50,12 @@ mod patterns_tests {
 
         let pattern = stripe_pattern(white, black);
 
-        assert_eq!(stripe_at(&pattern, point(1.0, 0.0, 0.0)), black);
-        assert_eq!(stripe_at(&pattern, point(0.0, 0.0, 0.0)), white);
-        assert_eq!(stripe_at(&pattern, point(-0.1, 0.0, 0.0)), black);
-        assert_eq!(stripe_at(&pattern, point(0.9, 0.0, 0.0)), white);
-        assert_eq!(stripe_at(&pattern, point(-1.0, 0.0, 0.0)), black);
-        assert_eq!(stripe_at(&pattern, point(-1.1, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(1.0, 0.0, 0.0)), black);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(-0.1, 0.0, 0.0)), black);
+        assert_eq!(pattern.pattern_at(point(0.9, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(-1.0, 0.0, 0.0)), black);
+        assert_eq!(pattern.pattern_at(point(-1.1, 0.0, 0.0)), white);
     }
 
     #[test]
@@ -66,7 +66,7 @@ mod patterns_tests {
         object.set_transform(scaling(2.0, 2.0, 2.0));
         let pattern = stripe_pattern(white, black);
 
-        let c = stripe_at_object(&pattern, object.deref(), point(1.5, 0.0, 0.0));
+        let c = pattern.pattern_at_shape(object.deref(), point(1.5, 0.0, 0.0));
 
         assert_eq!(c, white)
     }
@@ -79,7 +79,7 @@ mod patterns_tests {
         let mut pattern = stripe_pattern(white, black);
         set_pattern_transformation(&mut pattern, scaling(2.0, 2.0, 2.0));
 
-        let c = stripe_at_object(&pattern, object.deref(), point(1.5, 0.0, 0.0));
+        let c = pattern.pattern_at_shape(object.deref(), point(1.5, 0.0, 0.0));
 
         assert_eq!(c, white)
     }
@@ -93,8 +93,25 @@ mod patterns_tests {
         let mut pattern = stripe_pattern(white, black);
         set_pattern_transformation(&mut pattern, translation(0.5, 0.0, 2.0));
 
-        let c = stripe_at_object(&pattern, object.deref(), point(2.5, 0.0, 0.0));
+        let c = pattern.pattern_at_shape(object.deref(), point(2.5, 0.0, 0.0));
 
         assert_eq!(c, white)
+    }
+
+    #[test]
+    /// The default pattern transformation
+    fn default_pattern_transformation() {
+        let pattern = test_pattern();
+
+        assert_eq!(pattern.transform(), Matrix::identity4x4());
+    }
+
+    #[test]
+    /// Assigning a transformation
+    fn assigning_a_transformation() {
+        let mut pattern = test_pattern();
+        pattern.set_transform(translation(1.0, 2.0, 3.0));
+
+        assert_eq!(pattern.transform(), translation(1.0, 2.0, 3.0));
     }
 }

@@ -2,7 +2,6 @@ use ray_tracer_challenge::*;
 
 #[cfg(test)]
 mod spheres {
-
     use super::*;
 
     #[test]
@@ -27,7 +26,7 @@ mod spheres {
     fn default_material() {
         let s = test_shape();
 
-        assert_eq!(s.material(), material())
+        assert_eq!(*s.material(), material())
     }
 
     #[test]
@@ -36,9 +35,9 @@ mod spheres {
         let mut s = test_shape();
         let mut m = material();
         m.ambient = 1.0;
-        s.set_material(m.clone());
+        s.set_material(m);
 
-        assert_eq!(s.material(), m)
+        assert_eq!(s.material().ambient, 1.0)
     }
 
     #[test]

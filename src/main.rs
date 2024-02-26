@@ -110,9 +110,6 @@ fn chapter8() {
     let mut floor = plane();
     floor.set_transform(translation(0.0, 0.0, 0.0));
 
-    let mut back = plane();
-    back.set_transform(rotation_x(PI/2.0) * translation(0.0, 0.0, 15.0));
-
     let mut mat = material();
     mat.color = color(1.0, 0.9, 0.9);
     mat.specular = 0.0;
@@ -122,6 +119,9 @@ fn chapter8() {
     middle.set_transform(translation(-0.5, 1.0, 0.5));
 
     let mut mat = material();
+    let mut pattern = stripe_pattern(color(0.1, 1.0, 0.5), color(1.0, 1.0, 1.0));
+    pattern.set_transform(scaling(0.25, 0.25, 0.25));
+    mat.pattern = Some(Box::new(pattern));
     mat.color = color(0.1, 1.0, 0.5);
     mat.diffuse = 0.7;
     mat.specular = 0.3;
@@ -132,6 +132,9 @@ fn chapter8() {
     right.set_transform(translation(1.5, 0.5, -0.5) * scaling(0.5, 0.5, 0.5));
 
     let mut mat = material();
+    let mut pattern = stripe_pattern(color(0.5, 1.0, 0.1), color(1.0, 1.0, 1.0));
+    pattern.set_transform(rotation_z(PI/4.0) * scaling(0.1,0.1,0.1));
+    mat.pattern = Some(Box::new(pattern));
     mat.color = color(0.5, 1.0, 0.1);
     mat.diffuse = 0.7;
     mat.specular = 0.3;
@@ -141,6 +144,9 @@ fn chapter8() {
     left.set_transform(translation(-1.5, 0.33, -0.75) * scaling(0.33, 0.33, 0.33));
 
     let mut mat = material();
+    let mut pattern = stripe_pattern(color(1.0, 0.8, 0.1), color(0.8, 1.0, 0.1));
+    pattern.set_transform(rotation_z(-PI/2.0) * scaling(0.1,0.1,0.1));
+    mat.pattern = Some(Box::new(pattern));
     mat.color = color(1.0, 0.8, 0.1);
     mat.diffuse = 0.7;
     mat.specular = 0.3;
@@ -151,12 +157,11 @@ fn chapter8() {
     world.lights.push(point_light(point(-10.0, 3.0, -10.0), color(1.0, 1.0, 1.0)));
 
     world.objects.push(floor);
-    world.objects.push(back);
     world.objects.push(middle);
     world.objects.push(right);
     world.objects.push(left);
 
-    let mut camera = camera(160, 120, PI/3.0);
+    let mut camera = camera(800, 600, PI/3.0);
     camera.transform = view_transformation(
         point(0.0, 1.5, -5.0),
         point(0.0, 1.0, 0.0),
@@ -164,7 +169,7 @@ fn chapter8() {
 
     let canvas = render(&camera, &world);
     let sphere_data = canvas_to_ppm(canvas);
-    let mut f = File::create("world-with-plane.ppm").unwrap();
+    let mut f = File::create("world-with-plane-and-pattern.ppm").unwrap();
     f.write_all(sphere_data.as_bytes()).unwrap();
     f.sync_all().unwrap();
 }

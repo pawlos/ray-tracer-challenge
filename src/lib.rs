@@ -119,6 +119,12 @@ pub struct GradientPattern {
     transform: Matrix,
 }
 
+pub struct CheckersPattern {
+    a: Color,
+    b: Color,
+    transform: Matrix,
+}
+
 impl Pattern for StripePattern {
     fn set_transform(&mut self, transform: Matrix) {
         self.transform = transform;
@@ -166,6 +172,25 @@ impl Pattern for GradientPattern {
         let v_b = self.a.blue + (self.b.blue - self.a.blue)*(point.x - point.x.floor());
         
         color(v_r, v_g, v_b)
+    }
+}
+
+impl Pattern for CheckersPattern {
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn pattern_at(&self, point: Point) -> Color {
+        let v = point.x.abs() + point.y.abs() + point.z.abs();
+        if v.rem_euclid(2.0).floor() == 0.0 {
+            self.a
+        } else {
+            self.b
+        }
     }
 }
 
@@ -982,20 +1007,24 @@ pub fn default_world() -> World {
     World { objects: vec![s1, s2], lights: vec![light] }
 }
 
-pub fn stripe_pattern(white: Color, black: Color) -> StripePattern {
-   StripePattern { a: white, b: black, transform: Matrix::identity4x4() }
+pub fn stripe_pattern(a: Color, b: Color) -> StripePattern {
+   StripePattern { a, b, transform: Matrix::identity4x4() }
 }
 
 pub fn test_pattern() -> TestPattern {
     TestPattern { transform: Matrix::identity4x4() }
 }
 
-pub fn gradient_pattern(white: Color, black: Color) -> GradientPattern {
+pub fn gradient_pattern(a: Color, b: Color) -> GradientPattern {
     GradientPattern {
-        a: white,
-        b: black,
+        a,
+        b,
         transform: Matrix::identity4x4() 
     }
+}
+
+pub fn checkers_pattern(a: Color, b: Color) -> CheckersPattern {
+    CheckersPattern { a, b, transform: Matrix::identity4x4() }
 }
 
 pub fn set_pattern_transformation(pattern: &mut StripePattern, transform: Matrix) {

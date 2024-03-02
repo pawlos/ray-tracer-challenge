@@ -125,4 +125,37 @@ mod patterns_tests {
         assert_eq!(pattern.pattern_at(point(0.5, 0.0, 0.0)), color(0.5, 0.5, 0.5));
         assert_eq!(pattern.pattern_at(point(0.75, 0.0, 0.0)), color(0.25, 0.25, 0.25));
     }
+
+    #[test]
+    /// Checkers should repeat in x
+    fn checkers_should_repeat_in_x() {
+        let (white, black) = setup();
+        let pattern = checkers_pattern(white, black);
+
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.99, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(1.0, 0.0, 0.0)), black);
+    }
+
+    #[test]
+    /// Checkers should repeat in y
+    fn checkers_should_repeat_in_y() {
+        let (white, black) = setup();
+        let pattern = checkers_pattern(white, black);
+
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.99, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 1.0, 0.0)), black);
+    }
+
+    #[test]
+    /// Checkers should repeat in z
+    fn checkers_should_repeat_in_z() {
+        let (white, black) = setup();
+        let pattern = checkers_pattern(white, black);
+
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.99)), white);
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 1.0)), black);
+    }
 }

@@ -2,7 +2,6 @@ use ray_tracer_challenge::*;
 
 #[cfg(test)]
 mod rays {
-    use ray_tracer_challenge::{position, transform};
     use super::*;
 
     #[test]

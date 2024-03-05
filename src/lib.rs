@@ -132,6 +132,12 @@ pub struct RingPattern {
     transform: Matrix,
 }
 
+pub struct RadialGradient {
+    a: Color,
+    b: Color,
+    transform: Matrix,
+}
+
 impl Pattern for StripePattern {
     fn set_transform(&mut self, transform: Matrix) {
         self.transform = transform;
@@ -200,6 +206,7 @@ impl Pattern for CheckersPattern {
         }
     }
 }
+
 impl Pattern for RingPattern {
     fn set_transform(&mut self, transform: Matrix) {
         self.transform = transform;
@@ -218,6 +225,28 @@ impl Pattern for RingPattern {
         }
     }
 }
+
+impl Pattern for RadialGradient {
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn pattern_at(&self, point: Point) -> Color {
+        let v = (point.x.powi(2) + point.z.powi(2)).sqrt().rem_euclid(2.0);
+
+        let v_r = self.a.red + (self.b.red - self.a.red)*(v - v.floor());
+        let v_g = self.a.green + (self.b.green - self.a.green)*(v - v.floor());
+        let v_b = self.a.blue + (self.b.blue - self.a.blue)*(v - v.floor());
+
+
+        color(v_r, v_g, v_b)
+    }
+}
+
 impl Shape for Sphere {
     fn id(&self) -> Uuid {
         self.id
@@ -1051,10 +1080,18 @@ pub fn checkers_pattern(a: Color, b: Color) -> CheckersPattern {
     CheckersPattern { a, b, transform: Matrix::identity4x4() }
 }
 
-pub fn ring_pattern(color_a: Color, color_b: Color) -> RingPattern {
+pub fn ring_pattern(a: Color, b: Color) -> RingPattern {
     RingPattern {
-        a: color_a,
-        b: color_b,
+        a,
+        b,
+        transform: Matrix::identity4x4()
+    }
+}
+
+pub fn ring_gradient(a: Color, b: Color) -> RadialGradient {
+    RadialGradient {
+        a,
+        b,
         transform: Matrix::identity4x4()
     }
 }

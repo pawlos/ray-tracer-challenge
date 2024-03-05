@@ -93,7 +93,7 @@ fn chapter6() {
                     let point = position(r, hit.t);
                     let normal = hit.object.normal_at(point);
                     let eye = r.direction;
-                    let color = lightning(&hit.object.material(), hit.object, &light, point, eye, normal, false);
+                    let color = lightning(hit.object.material(), hit.object, &light, point, eye, normal, false);
                     canvas.write_pixel(x ,y, color)
                 },
                 _ => {}
@@ -144,8 +144,8 @@ fn chapter8() {
     left.set_transform(translation(-1.5, 0.33, -0.75) * scaling(0.33, 0.33, 0.33));
 
     let mut mat = material();
-    let mut pattern = stripe_pattern(color(1.0, 0.8, 0.1), color(0.8, 1.0, 0.1));
-    pattern.set_transform(rotation_z(-PI/2.0) * scaling(0.1,0.1,0.1));
+    let mut pattern = ring_gradient(color(1.0, 0.8, 0.1), color(0.8, 1.0, 0.1));
+    pattern.set_transform(scaling(0.1,0.1,0.1));
     mat.pattern = Some(Box::new(pattern));
     mat.color = color(1.0, 0.8, 0.1);
     mat.diffuse = 0.7;
@@ -161,7 +161,10 @@ fn chapter8() {
     world.objects.push(right);
     world.objects.push(left);
 
-    let mut camera = camera(800, 600, PI/3.0);
+    let hsize = 480;
+    let vsize = 360;
+
+    let mut camera = camera(hsize, vsize, PI/3.0);
     camera.transform = view_transformation(
         point(0.0, 1.5, -5.0),
         point(0.0, 1.0, 0.0),
@@ -169,7 +172,7 @@ fn chapter8() {
 
     let canvas = render(&camera, &world);
     let sphere_data = canvas_to_ppm(canvas);
-    let mut f = File::create("world-with-plane-and-pattern.ppm").unwrap();
+    let mut f = File::create(format!("world-with-plane-and-pattern{0}x{1}.ppm", hsize, vsize)).unwrap();
     f.write_all(sphere_data.as_bytes()).unwrap();
     f.sync_all().unwrap();
 }

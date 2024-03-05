@@ -158,4 +158,17 @@ mod patterns_tests {
         assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.99)), white);
         assert_eq!(pattern.pattern_at(point(0.0, 0.0, 1.0)), black);
     }
+    
+    #[test]
+    /// A ring should extend in both x and z
+    fn ring_should_extend_in_both_x_and_z() {
+        let (white, black) = setup();
+        let pattern = ring_pattern(white, black);
+        
+        assert_eq!(pattern.pattern_at(point(0.0, 0.0, 0.0)), white);
+        assert_eq!(pattern.pattern_at(point(1.0, 0.0, 0.0)), black);
+        assert_eq!(pattern.pattern_at(point(1.0, 0.0, 1.0)), black);
+
+        assert_eq!(pattern.pattern_at(point(0.708, 0.0, 0.708)), black);
+    }
 }

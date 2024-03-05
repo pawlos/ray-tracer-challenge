@@ -119,9 +119,16 @@ pub struct GradientPattern {
     transform: Matrix,
 }
 
+
 pub struct CheckersPattern {
     a: Color,
     b: Color,
+    transform: Matrix,
+}
+
+pub struct RingPattern {
+    pub a: Color,
+    pub b: Color,
     transform: Matrix,
 }
 
@@ -193,7 +200,24 @@ impl Pattern for CheckersPattern {
         }
     }
 }
+impl Pattern for RingPattern {
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
 
+    fn transform(&self) -> Matrix {
+        self.transform.clone()
+    }
+
+    fn pattern_at(&self, point: Point) -> Color {
+        let v = (point.x.powi(2) + point.z.powi(2)).sqrt().rem_euclid(2.0).floor();
+        if v == 0.0 {
+            self.a
+        } else {
+            self.b
+        }
+    }
+}
 impl Shape for Sphere {
     fn id(&self) -> Uuid {
         self.id
@@ -621,7 +645,7 @@ impl Debug for Material {
     }
 }
 
-impl<'a> PartialEq for Sphere {
+impl PartialEq for Sphere {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id()
     }
@@ -883,11 +907,11 @@ pub fn test_shape() -> Box<dyn Shape> {
         saved_ray: ray(point(0.0, 0.0, 0.0), vector(0.0,0.0,0.0)) })
 }
 
-pub fn intersection<'a>(t:f32, object: &'a dyn Shape) -> Intersection<'a> {
+pub fn intersection(t:f32, object: &dyn Shape) -> Intersection {
     Intersection { t, object }
 }
 
-pub fn intersect_world<'a>(w: &'a World, r: Ray) -> Vec<Intersection<'a>> {
+pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
     let mut intersections = w.objects.iter().flat_map(|o| o.intersect(r))
         .collect::<Vec<_>>();
     intersections.sort_by(|i, j|
@@ -900,7 +924,7 @@ pub fn intersect_world<'a>(w: &'a World, r: Ray) -> Vec<Intersection<'a>> {
     intersections
 }
 
-pub fn prepare_computations<'a>(i: Intersection<'a>, r: Ray) -> Computation<'a> {
+pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
     let point = position(r, i.t);
     let mut normal_v = i.object.normal_at(point);
     let inside = dot(normal_v, -r.direction) < 0.0;
@@ -1027,13 +1051,21 @@ pub fn checkers_pattern(a: Color, b: Color) -> CheckersPattern {
     CheckersPattern { a, b, transform: Matrix::identity4x4() }
 }
 
+pub fn ring_pattern(color_a: Color, color_b: Color) -> RingPattern {
+    RingPattern {
+        a: color_a,
+        b: color_b,
+        transform: Matrix::identity4x4()
+    }
+}
+
 pub fn set_pattern_transformation(pattern: &mut StripePattern, transform: Matrix) {
     pattern.transform = transform;
 }
 
-pub fn shade_hit<'a>(w: &'a World, c: &Computation) -> Color {
+pub fn shade_hit(w: &World, c: &Computation) -> Color {
     let is_shadowed = is_shadowed(w, c.over_point);
-    lightning(&c.object.material(), c.object, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
+    lightning(c.object.material(), c.object, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
 }
 
 pub fn color_at<'a>(w: &'a World, r: Ray) -> Color {
@@ -1092,7 +1124,7 @@ pub fn ray_for_pixel(c: &Camera, px: i32, py: i32) -> Ray {
     Ray { origin, direction }
 }
 
-pub fn render<'a>(camera: &Camera, world: &'a World) -> Canvas {
+pub fn render(camera: &Camera, world: &World) -> Canvas {
     let mut c = Canvas::new(camera.hsize, camera.vsize);
     for y in 0..camera.vsize {
         for x in 0..camera.hsize {
@@ -1104,7 +1136,7 @@ pub fn render<'a>(camera: &Camera, world: &'a World) -> Canvas {
     c
 }
 
-pub fn is_shadowed<'a>(w: &'a World, p: Point) -> bool {
+pub fn is_shadowed(w: &World, p: Point) -> bool {
     let v = w.lights[0].position - p;
     let distance = magnitude(v);
     let direction = normalize(v);

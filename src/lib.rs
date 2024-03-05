@@ -942,7 +942,7 @@ pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
     }
 }
 
-pub fn hit<'a>(xs: &mut Vec<Intersection<'a>>) -> Option<Intersection<'a>> {
+pub fn hit<'a>(xs: &mut [Intersection<'a>]) -> Option<Intersection<'a>> {
     xs.sort_by(|i, j| i.t.total_cmp(&j.t));
 
     let filtered = xs.iter().filter(|i| i.t >= 0.0).take(1).collect::<Vec<_>>();

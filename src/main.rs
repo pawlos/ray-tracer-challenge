@@ -106,6 +106,7 @@ fn chapter6() {
     f.sync_all().unwrap();
 }
 
+#[allow(dead_code)]
 fn chapter8() {
     let mut floor = plane();
     floor.set_transform(translation(0.0, 0.0, 0.0));
@@ -177,8 +178,78 @@ fn chapter8() {
     f.sync_all().unwrap();
 }
 
+fn chapter11() {
+    let mut floor = plane();
+    floor.set_transform(translation(0.0, 0.0, 0.0));
+
+    let mut mat = material();
+    mat.color = color(1.0, 0.9, 0.9);
+    mat.specular = 0.0;
+    floor.set_material(mat);
+
+    let mut middle = sphere();
+    middle.set_transform(translation(-0.5, 1.0, 0.5));
+
+    let mut mat = material();
+    //mat.diffuse = 0.7;
+    //mat.specular = 0.3;
+    mat.transparency = 0.9;
+    mat.shininess = 0.9;
+    mat.refractive_index = 0.3;
+    mat.reflective = 0.5;
+    middle.set_material(mat);
+
+
+    let mut right = sphere();
+    right.set_transform(translation(1.5, 0.5, -0.5) * scaling(0.5, 0.5, 0.5));
+
+    let mut mat = material();
+    let mut pattern = stripe_pattern(color(0.5, 1.0, 0.1), color(1.0, 1.0, 1.0));
+    pattern.set_transform(rotation_z(PI/4.0) * scaling(0.1,0.1,0.1));
+    mat.pattern = Some(Box::new(pattern));
+    mat.color = color(0.5, 1.0, 0.1);
+    mat.diffuse = 0.7;
+    mat.specular = 0.3;
+    right.set_material(mat);
+
+    let mut left = sphere();
+    left.set_transform(translation(-1.5, 0.33, -0.75) * scaling(0.33, 0.33, 0.33));
+
+    let mut mat = material();
+    let mut pattern = ring_gradient(color(1.0, 0.8, 0.1), color(0.8, 1.0, 0.1));
+    pattern.set_transform(scaling(0.1,0.1,0.1));
+    mat.pattern = Some(Box::new(pattern));
+    mat.color = color(1.0, 0.8, 0.1);
+    mat.diffuse = 0.7;
+    mat.specular = 0.3;
+    left.set_material(mat);
+
+
+    let mut world = world();
+    world.lights.push(point_light(point(-10.0, 3.0, -10.0), color(1.0, 1.0, 1.0)));
+
+    world.objects.push(floor);
+    world.objects.push(middle);
+    world.objects.push(right);
+    world.objects.push(left);
+
+    let hsize = /*120;*/480;
+    let vsize = /*90;*/360;
+
+    let mut camera = camera(hsize, vsize, PI/3.0);
+    camera.transform = view_transformation(
+        point(0.0, 1.5, -5.0),
+        point(0.0, 1.0, 0.0),
+        vector(0.0, 1.0, 0.0));
+
+    let canvas = render(&camera, &world);
+    let sphere_data = canvas_to_ppm(canvas);
+    let mut f = File::create(format!("world-with-mirrors{0}x{1}.ppm", hsize, vsize)).unwrap();
+    f.write_all(sphere_data.as_bytes()).unwrap();
+    f.sync_all().unwrap();
+}
 
 fn main() {
-    chapter8();
+    chapter11();
     println!("Done");
 }

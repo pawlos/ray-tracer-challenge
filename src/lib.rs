@@ -6,10 +6,13 @@ use uuid::Uuid;
 
 pub const EPS: f32 = 0.0001;
 
+pub const DEFAULT_REFLECTION_NUMBER :u8 = 4;
+
 pub trait Shape {
     fn id(&self) -> Uuid;
     fn transform(&self) -> Matrix;
     fn material(&self) -> &Material;
+    fn mut_material(&mut self) -> &mut Material;
     fn set_transform(&mut self, transform: Matrix);
     fn set_material(&mut self, material: Material);
 
@@ -260,6 +263,10 @@ impl Shape for Sphere {
         &self.material
     }
 
+    fn mut_material(&mut self) -> &mut Material {
+        &mut self.material
+    }
+
     fn set_transform(&mut self, transform: Matrix) {
         self.transform = transform;
     }
@@ -305,6 +312,10 @@ impl Shape for Plane {
         &self.material
     }
 
+    fn mut_material(&mut self) -> &mut Material {
+        &mut self.material
+    }
+
     fn set_transform(&mut self, transform: Matrix) {
         self.transform = transform;
     }
@@ -336,6 +347,10 @@ impl Shape for TestShape {
 
     fn material(&self) -> &Material {
         &self.material
+    }
+
+    fn mut_material(&mut self) -> &mut Material {
+        &mut self.material
     }
 
     fn set_transform(&mut self, transform: Matrix) {
@@ -373,6 +388,9 @@ pub struct Material {
     pub diffuse: f32,
     pub specular: f32,
     pub shininess: f32,
+    pub reflective: f32,
+    pub transparency: f32,
+    pub refractive_index: f32,
     pub pattern: Option<Box<dyn Pattern>>,
 }
 
@@ -389,6 +407,10 @@ pub struct Computation<'a> {
     pub normal_v: Vector,
     pub inside: bool,
     pub over_point: Point,
+    pub under_point: Point,
+    pub reflect_v: Vector,
+    pub n1: f32,
+    pub n2: f32,
 }
 
 pub struct Camera {
@@ -921,6 +943,17 @@ pub fn sphere() -> Box<dyn Shape> {
         material: material()})
 }
 
+pub fn glass_sphere() -> Box<dyn Shape> {
+    let mut material = material();
+    material.transparency = 1.0;
+    material.refractive_index = 1.5;
+    Box::new(Sphere {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4(),
+        material,
+    })
+}
+
 pub fn plane() -> Box<dyn Shape> {
     Box::new(Plane {
         id: Uuid::new_v4(),
@@ -953,28 +986,70 @@ pub fn intersect_world(w: &World, r: Ray) -> Vec<Intersection> {
     intersections
 }
 
-pub fn prepare_computations(i: Intersection, r: Ray) -> Computation {
-    let point = position(r, i.t);
-    let mut normal_v = i.object.normal_at(point);
+fn calculate_point(hit: Intersection, i: &Intersection, containers: &[Uuid], uuids : &[(Uuid, f32)]) -> Option<f32>
+{
+    if *i == hit {
+        return if containers.is_empty() {
+            Some(1.0f32)
+        } else {
+            let last_uuid = containers.last().unwrap();
+            let elem = uuids.iter().find(|e| e.0 == *last_uuid).unwrap();
+            Some(elem.1)
+        }
+    }
+
+    None
+}
+
+pub fn prepare_computations<'a>(hit: Intersection<'a>, r: Ray, xs: &'a Vec<Intersection<'a>>) -> Computation<'a> {
+    let point = position(r, hit.t);
+    let mut normal_v = hit.object.normal_at(point);
     let inside = dot(normal_v, -r.direction) < 0.0;
     if inside {
         normal_v = -normal_v;
     }
+    let reflect_v = reflect(r.direction, normal_v);
+    let mut containers : Vec<Uuid> = [].to_vec();
+    let uuids_with_refractive_index : Vec<_> = xs.iter().map(|el| (
+        el.object.id(), el.object.material().refractive_index)).collect();
+    let mut n1 = None;
+    let mut n2 = None;
+
+    for j in xs {
+        n1 = calculate_point(hit, j, &containers, &uuids_with_refractive_index);
+
+        if containers.iter().any(|el| *el == j.object.id()) {
+            containers.remove(containers.iter().position(|el| *el == j.object.id()).unwrap());
+        } else {
+            containers.push(j.object.id());
+        }
+
+        n2 = calculate_point(hit, j, &containers, &uuids_with_refractive_index);
+
+        if n1.is_some() && n2.is_some() {
+            break;
+        }
+    }
     Computation {
-        t: i.t,
-        object: i.object,
+        t: hit.t,
+        object: hit.object,
         point,
         eye_v: -r.direction,
         inside,
         normal_v,
-        over_point: point + normal_v * EPS
+        over_point: point + normal_v * EPS,
+        under_point: point - normal_v * EPS,
+        reflect_v,
+        n1: n1.unwrap_or(0.0),
+        n2: n2.unwrap_or(0.0),
     }
 }
 
-pub fn hit<'a>(xs: &mut [Intersection<'a>]) -> Option<Intersection<'a>> {
-    xs.sort_by(|i, j| i.t.total_cmp(&j.t));
+pub fn hit<'a>(xs: &[Intersection<'a>]) -> Option<Intersection<'a>> {
+    let mut new_vec = xs.to_vec();
+    new_vec.sort_by(|i, j| i.t.total_cmp(&j.t));
 
-    let filtered = xs.iter().filter(|i| i.t >= 0.0).take(1).collect::<Vec<_>>();
+    let filtered = new_vec.iter().filter(|i| i.t >= 0.0).take(1).collect::<Vec<_>>();
     match filtered.len() {
         | 0 => None,
         | _ => Some(*filtered[0])
@@ -1000,7 +1075,10 @@ pub fn material() -> Material {
         diffuse: 0.9,
         specular: 0.9,
         shininess: 200.0,
-        pattern: None
+        pattern: None,
+        reflective: 0.0,
+        transparency: 0.0,
+        refractive_index: 1.0,
     }
 }
 
@@ -1100,21 +1178,64 @@ pub fn set_pattern_transformation(pattern: &mut StripePattern, transform: Matrix
     pattern.transform = transform;
 }
 
-pub fn shade_hit(w: &World, c: &Computation) -> Color {
+pub fn shade_hit(w: &World, c: &Computation, remaining: u8) -> Color {
     let is_shadowed = is_shadowed(w, c.over_point);
-    lightning(c.object.material(), c.object, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed)
+    let surface = lightning(c.object.material(), c.object, &w.lights[0], c.over_point, c.eye_v, c.normal_v, is_shadowed);
+
+    let reflected = reflected_color(w, c, remaining);
+    let refracted = refracted_color(w, c, remaining);
+    surface + reflected + refracted
 }
 
-pub fn color_at<'a>(w: &'a World, r: Ray) -> Color {
-    let mut intersections: Vec<Intersection<'a>> = intersect_world(w, r);
+pub fn reflected_color(w: &World, c: &Computation, remaining: u8) -> Color {
+    if remaining == 0 {
+        return color(0.0, 0.0, 0.0);
+    }
+    if c.object.material().reflective == 0.0 {
+        return color(0.0, 0.0, 0.0);
+    }
+    let reflect_ray = ray(c.over_point, c.reflect_v);
+    let color = color_at(w, reflect_ray, remaining - 1);
 
-    let hit= hit(&mut intersections);
+    color * c.object.material().reflective
+}
+
+pub fn refracted_color(w: &World, c: &Computation, remaining: u8) -> Color {
+    if remaining == 0 {
+        return color(0.0, 0.0, 0.0);
+    }
+    if c.object.material().transparency == 0.0 {
+        return color(0.0, 0.0, 0.0);
+    }
+    let n_ratio = c.n1 / c.n2;
+
+    let cos_i = dot(c.eye_v, c.normal_v);
+
+    let sin2_t = n_ratio.powf(2.0) * (1.0 - cos_i.powf(2.0));
+
+    if sin2_t > 1.0 {
+        return color(0.0, 0.0, 0.0);
+    }
+
+    let cos_t = (1.0 - sin2_t).sqrt();
+
+    let direction = c.normal_v * (n_ratio * cos_i - cos_t) - c.eye_v * n_ratio;
+
+    let refracted_ray = ray(c.under_point, direction);
+
+    color_at(w, refracted_ray, remaining - 1) * c.object.material().transparency
+}
+
+pub fn color_at<'a>(w: &'a World, r: Ray, remaining: u8) -> Color {
+    let intersections: Vec<Intersection<'a>> = intersect_world(w, r);
+
+    let hit= hit(&intersections);
     match hit
     {
         | None => color(0.0, 0.0, 0.0),
         | Some(i) => {
-            let comp = prepare_computations(i, r);
-            shade_hit(w, &comp)
+            let comp = prepare_computations(i, r, &intersections);
+            shade_hit(w, &comp, remaining)
         }
     }
 }
@@ -1166,7 +1287,7 @@ pub fn render(camera: &Camera, world: &World) -> Canvas {
     for y in 0..camera.vsize {
         for x in 0..camera.hsize {
             let ray = ray_for_pixel(camera, x, y);
-            let color = color_at(world, ray);
+            let color = color_at(world, ray, DEFAULT_REFLECTION_NUMBER);
             c.write_pixel(x, y, color)
         }
     }
@@ -1179,8 +1300,8 @@ pub fn is_shadowed(w: &World, p: Point) -> bool {
     let direction = normalize(v);
     let r = ray(p, direction);
 
-    let mut intersections = intersect_world(w, r);
-    let h = hit(&mut intersections);
+    let intersections = intersect_world(w, r);
+    let h = hit(&intersections);
 
     match h {
         | Some(intersection) => intersection.t < distance,

@@ -127,4 +127,31 @@ mod materials {
         assert_eq!(c1, color(1.0, 1.0, 1.0));
         assert_eq!(c2, color(0.0, 0.0, 0.0));
     }
+
+    #[test]
+    /// Reflectivity for the default material
+    fn reflectivity_for_the_default_material() {
+        let m = material();
+        assert_eq!(m.reflective, 0.0);
+    }
+
+    #[test]
+    /// Precomputing the reflection vector
+    fn precomputing_the_reflection_vector() {
+        let shape = plane();
+        let r = ray(point(0.0, 1.0, -1.0), vector(0.0, -2.0f32.sqrt()/2.0, 2.0f32.sqrt()/2.0));
+        let i = intersection(2.0f32.sqrt(), shape.deref());
+        let intersections = [].to_vec();
+        let comps = prepare_computations(i, r, &intersections);
+        assert_eq!(comps.reflect_v, vector(0.0, 2.0f32.sqrt()/2.0, 2.0f32.sqrt()/2.0));
+    }
+
+    #[test]
+    /// Transparency and Refractive Index for the default material
+    fn transparency_and_refractive_index_for_the_default_material() {
+        let m = material();
+
+        assert_eq!(m.transparency, 0.0);
+        assert_eq!(m.refractive_index, 1.0);
+    }
 }

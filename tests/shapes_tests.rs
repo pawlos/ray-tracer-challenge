@@ -77,6 +77,14 @@ mod spheres {
         let n = s.normal_at(point(0.0, 1.70711, -std::f32::consts::FRAC_1_SQRT_2));
 
         assert_eq!(n, vector(0.0, std::f32::consts::FRAC_1_SQRT_2, -std::f32::consts::FRAC_1_SQRT_2))
+    }
 
+    #[test]
+    /// A helper for producing a sphere with a glassy material
+    fn helper_for_producing_a_sphere_with_a_glassy_material() {
+        let s = glass_sphere();
+        assert_eq!(s.transform(), Matrix::identity4x4());
+        assert_eq!(s.material().transparency, 1.0);
+        assert_eq!(s.material().refractive_index, 1.5);
     }
 }

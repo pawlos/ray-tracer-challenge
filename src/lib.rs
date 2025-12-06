@@ -1184,7 +1184,15 @@ pub fn shade_hit(w: &World, c: &Computation, remaining: u8) -> Color {
 
     let reflected = reflected_color(w, c, remaining);
     let refracted = refracted_color(w, c, remaining);
-    surface + reflected + refracted
+
+    let material =c.object.material();
+    if material.reflective > 0.0 && material.transparency > 0.0 {
+        let reflectance = schlick(c);
+        surface + reflected * reflectance + refracted * (1.0f32 - reflectance)
+    }
+    else {
+        surface + reflected + refracted
+    }
 }
 
 pub fn reflected_color(w: &World, c: &Computation, remaining: u8) -> Color {
@@ -1238,6 +1246,25 @@ pub fn color_at<'a>(w: &'a World, r: Ray, remaining: u8) -> Color {
             shade_hit(w, &comp, remaining)
         }
     }
+}
+
+pub fn schlick(c: &Computation) -> f32 {
+
+    let mut cos = dot(c.eye_v, c.normal_v);
+
+    if c.n1 > c.n2 {
+        let n = c.n1 / c.n2;
+        let sin2_t = n.powf(2.0) * (1.0 - cos.powf(2.0));
+        if sin2_t > 1.0 {
+            return 1.0;
+        }
+
+        let cos_t = (1.0 - sin2_t.powf(2.0)).sqrt();
+
+        cos = cos_t;
+    }
+    let r0 = ((c.n1 - c.n2) / (c.n1 + c.n2)).powf(2.0);
+    r0 + (1.0f32 - r0) * (1.0 - cos).powf(5.0)
 }
 
 pub fn view_transformation(from: Point, to: Point, up: Vector) -> Matrix {

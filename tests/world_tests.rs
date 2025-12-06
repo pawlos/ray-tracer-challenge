@@ -244,7 +244,7 @@ mod world {
     }
 
     #[test]
-    /// The refracted color with a refracted ray
+    /// The refracted color with a refracted ray p. 158
     fn refracted_color_with_a_refracted_ray() {
         let mut w = default_world();
         let a = &mut w.objects[0];
@@ -291,5 +291,32 @@ mod world {
 
         let c = shade_hit(&w, &comps, 5);
         assert_eq!(c, color(0.93642, 0.68642, 0.68642))
+    }
+
+    #[test]
+    /// shade_hit() with a reflective, transparent material p. 164
+    fn shade_hit_with_a_reflective_and_transparent_material() {
+        let mut w = default_world();
+        let mut floor = plane();
+        floor.set_transform(translation(0.0, -1.0, 0.0));
+        floor.mut_material().reflective = 0.5;
+        floor.mut_material().transparency = 0.5;
+        floor.mut_material().refractive_index = 1.5;
+        w.objects.push(floor);
+
+        let mut ball = sphere();
+        ball.mut_material().color = color(1.0, 0.0, 0.0);
+        ball.mut_material().ambient = 0.5;
+        ball.set_transform(translation(0.0, -3.5, -0.5));
+        w.objects.push(ball);
+
+        let r = ray(point(0.0, 0.0, -3.0), vector(0.0, -2.0f32.sqrt()/2.0f32, 2.0f32.sqrt()/2.0f32));
+
+        let xs = [intersection(2.0f32.sqrt(), w.objects[2].deref())].to_vec();
+
+        let comps = prepare_computations(xs[0], r, &xs);
+
+        let c = shade_hit(&w, &comps, 5);
+        assert_eq!(c, color(0.93391, 0.69643, 0.69243))
     }
 }

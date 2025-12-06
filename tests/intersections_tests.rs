@@ -301,4 +301,52 @@ mod intersection {
         assert!(comps.under_point.z > EPS/2.0);
         assert!(comps.point.z < comps.under_point.z);
     }
+
+    mod schlick {
+        use super::*;
+
+        #[test]
+        /// The Schlick approximation under total internal reflection p. 161
+        fn the_schlick_approximation_under_total_internal_reflection() {
+            let shape = glass_sphere();
+            let r = ray(point(0.0, 0.0, 2.0f32.sqrt() / 2.0f32), vector(0.0, 1.0f32, 0.0));
+
+            let xs1 = intersection(-2.0f32.sqrt() / 2.0f32, shape.deref());
+            let xs2 = intersection(2.0f32.sqrt() / 2.0f32, shape.deref());
+
+            let xs = [xs1, xs2].to_vec();
+
+            let comps = prepare_computations(xs2, r, &xs);
+            let reflectance = schlick(&comps);
+            assert!((reflectance - 1.0f32).abs() < EPS);
+        }
+
+        #[test]
+        /// The Schlick approximation with a perpendicular viewing angle p. 162
+        fn the_schlick_approximation_with_a_perpendicular_viewing_angle() {
+            let shape = glass_sphere();
+            let r = ray(point(0.0, 0.0, 0.0), vector(0.0, 1.0, 0.0));
+            let xs1 = intersection(-1.0f32, shape.deref());
+            let xs2 = intersection(1.0f32, shape.deref());
+            let xs = [xs1, xs2].to_vec();
+
+            let comps = prepare_computations(xs2, r, &xs);
+
+            let reflectance = schlick(&comps);
+            assert!((reflectance - 0.04f32).abs() < EPS);
+        }
+
+        #[test]
+        /// The Schlick approximation with small angle and n1 > n2 p. 163
+        fn the_schlick_approximation_with_small_angle_and_n1_bigger_n2() {
+            let shape = glass_sphere();
+            let r = ray(point(0.0, 0.99, -2.0), vector(0.0, 0.0, 1.0));
+            let xs1 = intersection(1.8589f32, shape.deref());
+
+            let xs = [xs1].to_vec();
+            let comps = prepare_computations(xs1, r, &xs);
+            let reflectance = schlick(&comps);
+            assert!((reflectance - 0.48873f32).abs() < EPS);
+        }
+    }
 }

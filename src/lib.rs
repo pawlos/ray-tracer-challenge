@@ -105,6 +105,13 @@ pub struct TestShape {
     pub material: Material,
 }
 
+#[derive(Debug)]
+pub struct Cube {
+    id: Uuid,
+    pub transform: Matrix,
+    pub material: Material,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StripePattern {
     pub a: Color,
@@ -367,6 +374,46 @@ impl Shape for TestShape {
 
     fn local_normal_at(&self, point: Point) -> Vector {
         vector(point.x, point.y, point.z)
+    }
+}
+
+impl Shape for Cube {
+    fn id(&self) -> Uuid { self.id }
+
+    fn transform(&self) -> Matrix { self.transform.clone() }
+
+    fn material(&self) -> &Material { &self.material }
+
+    fn mut_material(&mut self) -> &mut Material { &mut self.material }
+
+    fn set_transform(&mut self, transform: Matrix) { self.transform = transform; }
+
+    fn set_material(&mut self, material: Material) { self.material = material; }
+
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
+        let (xt_min, xt_max) = check_axis(ray.origin.x, ray.direction.x);
+        let (yt_min, yt_max) = check_axis(ray.origin.y, ray.direction.y);
+        let (zt_min, zt_max) = check_axis(ray.origin.z, ray.direction.z);
+
+        let t_min = xt_min.max(yt_min.max(zt_min));
+        let t_max = xt_max.min(yt_max.min(zt_max));
+
+        if t_min > t_max {
+            return [].to_vec();
+        }
+
+        [intersection(t_min, self), intersection(t_max, self)].to_vec()
+    }
+
+    fn local_normal_at(&self, point: Point) -> Vector {
+        let max_c = point.x.abs().max(point.y.abs().max(point.z.abs()));
+
+        if max_c == point.x.abs() {
+            return vector(point.x, 0.0, 0.0);
+        } else if max_c == point.y.abs() {
+            return vector(0.0, point.y, 0.0);
+        }
+        vector(0.0, 0.0, point.z)
     }
 }
 
@@ -969,6 +1016,13 @@ pub fn test_shape() -> Box<dyn Shape> {
         saved_ray: ray(point(0.0, 0.0, 0.0), vector(0.0,0.0,0.0)) })
 }
 
+pub fn cube() -> Box<dyn Shape> {
+    Box::new( Cube {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4(),
+        material: material()})
+}
+
 pub fn intersection(t:f32, object: &dyn Shape) -> Intersection {
     Intersection { t, object }
 }
@@ -1265,6 +1319,23 @@ pub fn schlick(c: &Computation) -> f32 {
     }
     let r0 = ((c.n1 - c.n2) / (c.n1 + c.n2)).powf(2.0);
     r0 + (1.0f32 - r0) * (1.0 - cos).powf(5.0)
+}
+
+fn check_axis(origin: f32, direction: f32) -> (f32, f32) {
+    let tmin_numerator = -1.0f32 - origin;
+    let tmax_numerator = 1.0f32 - origin;
+
+    let (mut tmin, mut tmax) =
+        if direction.abs() >= EPS {
+            (tmin_numerator / direction, tmax_numerator / direction)
+        } else {
+            (tmin_numerator * f32::INFINITY, tmax_numerator * f32::INFINITY)
+        };
+
+    if tmin > tmax {
+        std::mem::swap(&mut tmin, &mut tmax);
+    }
+    (tmin, tmax)
 }
 
 pub fn view_transformation(from: Point, to: Point, up: Vector) -> Matrix {

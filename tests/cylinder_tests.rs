@@ -2,6 +2,8 @@ use ray_tracer_challenge::*;
 
 #[cfg(test)]
 mod cylinders {
+    use std::any::Any;
+    use std::ops::Deref;
     use super::*;
 
     macro_rules! cylinder_tests_miss {
@@ -77,5 +79,14 @@ mod cylinders {
         normal_vector_on_cylinder_2: (point(0.0, 5.0, -1.0), vector(0.0, 0.0, -1.0)),
         normal_vector_on_cylinder_3: (point(0.0, -2.0, 1.0), vector(0.0, 0.0, 1.0)),
         normal_vector_on_cylinder_4: (point(-1.0, 1.0, 0.0), vector(-1.0, 0.0, 0.0)),
+    }
+
+    #[test]
+    /// The default minimum and maximum for a cylinder
+    fn default_minimum_and_maximum_for_cylinder() {
+        let cyl = cylinder();
+        let deref_cyl = cyl.as_any().downcast_ref::<Cylinder>().unwrap();
+        assert_eq!(f32::NEG_INFINITY, deref_cyl.minimum);
+        assert_eq!(f32::INFINITY, deref_cyl.maximum);
     }
 }

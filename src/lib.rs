@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, Div, Mul, Neg, Sub};
@@ -33,6 +34,8 @@ pub trait Shape {
 
         normalize(world_normal)
     }
+
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub trait Pattern {
@@ -117,6 +120,8 @@ pub struct Cylinder {
     id: Uuid,
     pub transform: Matrix,
     pub material: Material,
+    pub minimum: f32,
+    pub maximum: f32,
 }
 
 
@@ -312,6 +317,10 @@ impl Shape for Sphere {
     fn local_normal_at(&self, point: Point) -> Vector {
         vector(point.x, point.y, point.z)
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl Shape for Plane {
@@ -349,6 +358,10 @@ impl Shape for Plane {
     fn local_normal_at(&self, _point: Point) -> Vector {
         vector(0.0, 1.0, 0.0)
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl Shape for TestShape {
@@ -382,6 +395,10 @@ impl Shape for TestShape {
 
     fn local_normal_at(&self, point: Point) -> Vector {
         vector(point.x, point.y, point.z)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -423,6 +440,10 @@ impl Shape for Cube {
         }
         vector(0.0, 0.0, point.z)
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl Shape for Cylinder {
@@ -462,6 +483,10 @@ impl Shape for Cylinder {
 
     fn local_normal_at(&self, point: Point) -> Vector {
         vector(point.x, 0.0, point.z)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -1075,7 +1100,10 @@ pub fn cylinder() -> Box<dyn Shape> {
     Box::new( Cylinder {
         id: Uuid::new_v4(),
         transform: Matrix::identity4x4(),
-        material: material()})
+        material: material(),
+        minimum: f32::NEG_INFINITY,
+        maximum: f32::INFINITY,
+    })
 }
 
 pub fn intersection(t:f32, object: &dyn Shape) -> Intersection {

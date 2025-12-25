@@ -36,6 +36,8 @@ pub trait Shape {
     }
 
     fn as_any(&self) -> &dyn Any;
+
+    fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 
 pub trait Pattern {
@@ -123,7 +125,6 @@ pub struct Cylinder {
     pub minimum: f32,
     pub maximum: f32,
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StripePattern {
@@ -321,6 +322,10 @@ impl Shape for Sphere {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl Shape for Plane {
@@ -362,6 +367,11 @@ impl Shape for Plane {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
+
 }
 
 impl Shape for TestShape {
@@ -398,6 +408,10 @@ impl Shape for TestShape {
     }
 
     fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
         self
     }
 }
@@ -444,6 +458,10 @@ impl Shape for Cube {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl Shape for Cylinder {
@@ -478,7 +496,16 @@ impl Shape for Cylinder {
 
         let t0 = (-b - dist.sqrt())/(2.0 * a);
         let t1 = (-b + dist.sqrt())/(2.0 * a);
-        [intersection(t0, self), intersection(t1, self)].to_vec()
+        let y0 = ray.origin.y + t0 * ray.direction.y;
+        let mut xs: Vec<Intersection> = Vec::with_capacity(2);
+        if self.minimum < y0 && y0 < self.maximum {
+            xs.push(intersection(t0, self))
+        }
+        let y1 = ray.origin.y + t1 * ray.direction.y;
+        if self.minimum < y1 && y1 < self.maximum {
+            xs.push(intersection(t1, self))
+        }
+        xs
     }
 
     fn local_normal_at(&self, point: Point) -> Vector {
@@ -486,6 +513,10 @@ impl Shape for Cylinder {
     }
 
     fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
         self
     }
 }
@@ -541,6 +572,16 @@ pub struct Camera {
     pub field_of_view: f32,
     pub transform: Matrix,
     pub pixel_size: f32,
+}
+
+impl Cylinder {
+    pub fn set_maximum(&mut self, maximum: f32) {
+        self.maximum = maximum;
+    }
+
+    pub fn set_minimum(&mut self, minimum: f32) {
+        self.minimum = minimum;
+    }
 }
 
 impl Canvas {
@@ -1105,6 +1146,8 @@ pub fn cylinder() -> Box<dyn Shape> {
         maximum: f32::INFINITY,
     })
 }
+
+
 
 pub fn intersection(t:f32, object: &dyn Shape) -> Intersection {
     Intersection { t, object }

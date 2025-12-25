@@ -89,4 +89,35 @@ mod cylinders {
         assert_eq!(f32::NEG_INFINITY, deref_cyl.minimum);
         assert_eq!(f32::INFINITY, deref_cyl.maximum);
     }
+
+    macro_rules! constraint_cylinder_intersecting {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (point, direction, count) = $value;
+
+            let mut c = cylinder();
+            let deref_cyl = c.as_mut_any().downcast_mut::<Cylinder>().unwrap();
+            deref_cyl.set_minimum(1.0);
+            deref_cyl.set_maximum(2.0);
+
+            let direction = normalize(direction);
+
+            let r = ray(point, direction);
+            let xs = c.local_intersect(r);
+
+            assert_eq!(count, xs.len());
+        }
+    )*}
+    }
+
+    constraint_cylinder_intersecting! {
+        constraint_cylinder_1: (point(0.0, 1.5, 0.0),  vector(0.1, 1.0, 0.0), 0),
+        constraint_cylinder_2: (point(0.0, 3.0, -5.0), vector(0.0, 0.0, 1.0), 0),
+        constraint_cylinder_3: (point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0), 0),
+        constraint_cylinder_4: (point(0.0, 2.0, -5.0), vector(0.0, 0.0, 1.0), 0),
+        constraint_cylinder_5: (point(0.0, 1.0, -5.0), vector(0.0, 0.0, 1.0), 0),
+        constraint_cylinder_6: (point(0.0, 1.5, -2.0), vector(0.0, 0.0, 1.0), 2),
+    }
 }

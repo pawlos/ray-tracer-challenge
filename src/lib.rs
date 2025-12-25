@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
+use std::mem::swap;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::vec;
 use uuid::Uuid;
@@ -482,7 +483,7 @@ impl Shape for Cylinder {
         let a = ray.direction.x.powf(2.0) + ray.direction.z.powf(2.0);
 
         if a < EPS {
-            return [].to_vec();
+            return self.intersect_cap(ray);
         }
 
         let b = 2.0 * ray.origin.x * ray.direction.x +
@@ -495,17 +496,32 @@ impl Shape for Cylinder {
             return [].to_vec();
         }
 
-        let t0 = (-b - dist.sqrt())/(2.0 * a);
-        let t1 = (-b + dist.sqrt())/(2.0 * a);
-        let y0 = ray.origin.y + t0 * ray.direction.y;
+        let mut t0 = (-b - dist.sqrt())/(2.0 * a);
+        let mut t1 = (-b + dist.sqrt())/(2.0 * a);
+        if t0 > t1 { swap(&mut t0, &mut t1); }
         let mut xs: Vec<Intersection> = Vec::with_capacity(2);
-        if self.minimum < y0 && y0 < self.maximum {
-            xs.push(intersection(t0, self))
-        }
+
+        let y0 = ray.origin.y + t0 * ray.direction.y;
         let y1 = ray.origin.y + t1 * ray.direction.y;
-        if self.minimum < y1 && y1 < self.maximum {
-            xs.push(intersection(t1, self))
+        if !self.closed {
+            if self.minimum < y0 && y0 < self.maximum {
+                xs.push(intersection(t0, self))
+            }
+            if self.minimum < y1 && y1 < self.maximum {
+                xs.push(intersection(t1, self))
+            }
         }
+        else {
+            if (self.minimum == f32::NEG_INFINITY || self.minimum - y0 < EPS) &&
+                (self.maximum == f32::INFINITY || y0 - self.minimum < EPS) {
+                xs.push(intersection(t0, self))
+            }
+            if (self.minimum == f32::NEG_INFINITY || self.minimum - y1 < EPS) &&
+                (self.maximum == f32::INFINITY || y1 - self.maximum < EPS) {
+                xs.push(intersection(t1, self))
+            }
+        }
+        xs.append(&mut self.intersect_cap(ray));
         xs
     }
 
@@ -582,6 +598,35 @@ impl Cylinder {
 
     pub fn set_minimum(&mut self, minimum: f32) {
         self.minimum = minimum;
+    }
+
+    pub fn set_closed(&mut self, closed: bool) {
+        self.closed = closed;
+    }
+
+    fn check_cap(&self, ray: Ray, t: f32) -> bool {
+        let x = ray.origin.x + t * ray.direction.x;
+        let z = ray.origin.z + t * ray.direction.z;
+
+        (x.powf(2.0) + z.powf(2.0)) <= 1.0
+    }
+
+    fn intersect_cap(&self, ray: Ray) -> Vec<Intersection> {
+        if !self.closed || ray.direction.y.abs() < f32::EPSILON {
+            return [].to_vec();
+        }
+
+        let mut xs: Vec<Intersection> = Vec::with_capacity(2);
+        let t1 = (self.minimum - ray.origin.y) / ray.direction.y;
+        if self.check_cap(ray, t1) {
+            xs.push(intersection(t1, self))
+        }
+
+        let t2 = (self.maximum - ray.origin.y) / ray.direction.y;
+        if self.check_cap(ray, t2) {
+            xs.push(intersection(t2, self))
+        }
+        xs
     }
 }
 
@@ -1461,7 +1506,7 @@ fn check_axis(origin: f32, direction: f32) -> (f32, f32) {
         };
 
     if tmin > tmax {
-        std::mem::swap(&mut tmin, &mut tmax);
+        swap(&mut tmin, &mut tmax);
     }
     (tmin, tmax)
 }

@@ -126,4 +126,35 @@ mod cylinders {
         let deref_cyl = cyl.as_any().downcast_ref::<Cylinder>().unwrap();
         assert!(!deref_cyl.closed);
     }
+
+    macro_rules! capped_cylinder_intersecting {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (point, direction, count) = $value;
+
+            let mut c = cylinder();
+            let deref_cyl = c.as_mut_any().downcast_mut::<Cylinder>().unwrap();
+            deref_cyl.set_minimum(1.0);
+            deref_cyl.set_maximum(2.0);
+            deref_cyl.set_closed(true);
+
+            let direction = normalize(direction);
+
+            let r = ray(point, direction);
+            let xs = c.local_intersect(r);
+
+            assert_eq!(count, xs.len());
+        }
+    )*}
+    }
+
+    capped_cylinder_intersecting! {
+        capped_cylinder_1: (point(0.0, 3.0, 0.0),  vector(0.0, -1.0, 0.0), 2),
+        capped_cylinder_2: (point(0.0, 3.0, -2.0), vector(0.0, -1.0, 2.0),  2),
+        capped_cylinder_3: (point(0.0, 4.0, -2.0), vector(0.0, -1.0, 1.0),  2),
+        capped_cylinder_4: (point(0.0, 0.0, -2.0), vector(0.0, 1.0, 2.0),  2),
+        capped_cylinder_5: (point(0.0, -1.0, -2.0), vector(0.0, 1.0, 1.0),  2),
+    }
 }

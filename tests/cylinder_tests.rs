@@ -55,4 +55,27 @@ mod cylinders {
         a_ray_intersects_a_cylinder_2: (point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0), 4.0, 6.0),
         a_ray_intersects_a_cylinder_3: (point(0.5, 0.0, -5.0), vector(0.1, 1.0, 1.0), 6.80798, 7.08872),
     }
+
+    macro_rules! cylinder_normal {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (point, normal) = $value;
+
+            let c = cylinder();
+
+            let n = c.local_normal_at(point);
+
+            assert_eq!(n, normal);
+        }
+    )*}
+    }
+
+    cylinder_normal! {
+        normal_vector_on_cylinder_1: (point(1.0, 0.0, 0.0), vector(1.0, 0.0, 0.0)),
+        normal_vector_on_cylinder_2: (point(0.0, 5.0, -1.0), vector(0.0, 0.0, -1.0)),
+        normal_vector_on_cylinder_3: (point(0.0, -2.0, 1.0), vector(0.0, 0.0, 1.0)),
+        normal_vector_on_cylinder_4: (point(-1.0, 1.0, 0.0), vector(-1.0, 0.0, 0.0)),
+    }
 }

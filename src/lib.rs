@@ -460,8 +460,8 @@ impl Shape for Cylinder {
         [intersection(t0, self), intersection(t1, self)].to_vec()
     }
 
-    fn local_normal_at(&self, _point: Point) -> Vector {
-        todo!()
+    fn local_normal_at(&self, point: Point) -> Vector {
+        vector(point.x, 0.0, point.z)
     }
 }
 

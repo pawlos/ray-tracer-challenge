@@ -2,8 +2,6 @@ use ray_tracer_challenge::*;
 
 #[cfg(test)]
 mod cylinders {
-    use std::any::Any;
-    use std::ops::Deref;
     use super::*;
 
     macro_rules! cylinder_tests_miss {
@@ -119,5 +117,13 @@ mod cylinders {
         constraint_cylinder_4: (point(0.0, 2.0, -5.0), vector(0.0, 0.0, 1.0), 0),
         constraint_cylinder_5: (point(0.0, 1.0, -5.0), vector(0.0, 0.0, 1.0), 0),
         constraint_cylinder_6: (point(0.0, 1.5, -2.0), vector(0.0, 0.0, 1.0), 2),
+    }
+
+    #[test]
+    /// The default closed value for a cylinder p. 185
+    fn default_closed_value_for_cylinder() {
+        let cyl = cylinder();
+        let deref_cyl = cyl.as_any().downcast_ref::<Cylinder>().unwrap();
+        assert!(!deref_cyl.closed);
     }
 }

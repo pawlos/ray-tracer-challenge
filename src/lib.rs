@@ -124,6 +124,7 @@ pub struct Cylinder {
     pub material: Material,
     pub minimum: f32,
     pub maximum: f32,
+    pub closed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1144,6 +1145,7 @@ pub fn cylinder() -> Box<dyn Shape> {
         material: material(),
         minimum: f32::NEG_INFINITY,
         maximum: f32::INFINITY,
+        closed: false,
     })
 }
 

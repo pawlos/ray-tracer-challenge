@@ -112,6 +112,14 @@ pub struct Cube {
     pub material: Material,
 }
 
+#[derive(Debug)]
+pub struct Cylinder {
+    id: Uuid,
+    pub transform: Matrix,
+    pub material: Material,
+}
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StripePattern {
     pub a: Color,
@@ -414,6 +422,46 @@ impl Shape for Cube {
             return vector(0.0, point.y, 0.0);
         }
         vector(0.0, 0.0, point.z)
+    }
+}
+
+impl Shape for Cylinder {
+    fn id(&self) -> Uuid { self.id }
+
+    fn transform(&self) -> Matrix { self.transform.clone() }
+
+    fn material(&self) -> &Material { &self.material }
+
+    fn mut_material(&mut self) -> &mut Material { &mut self.material }
+
+    fn set_transform(&mut self, transform: Matrix) { self.transform = transform; }
+
+    fn set_material(&mut self, material: Material) { self.material = material; }
+
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
+        let a = ray.direction.x.powf(2.0) + ray.direction.z.powf(2.0);
+
+        if a < EPS {
+            return [].to_vec();
+        }
+
+        let b = 2.0 * ray.origin.x * ray.direction.x +
+                     2.0 * ray.origin.z * ray.direction.z;
+        let c = ray.origin.x.powf(2.0) + ray.origin.z.powf(2.0) - 1.0;
+
+        let dist = b.powf(2.0) - 4.0*a*c;
+
+        if dist < 0.0 {
+            return [].to_vec();
+        }
+
+        let t0 = (-b - dist.sqrt())/(2.0 * a);
+        let t1 = (-b + dist.sqrt())/(2.0 * a);
+        [intersection(t0, self), intersection(t1, self)].to_vec()
+    }
+
+    fn local_normal_at(&self, _point: Point) -> Vector {
+        todo!()
     }
 }
 
@@ -1018,6 +1066,13 @@ pub fn test_shape() -> Box<dyn Shape> {
 
 pub fn cube() -> Box<dyn Shape> {
     Box::new( Cube {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4(),
+        material: material()})
+}
+
+pub fn cylinder() -> Box<dyn Shape> {
+    Box::new( Cylinder {
         id: Uuid::new_v4(),
         transform: Matrix::identity4x4(),
         material: material()})

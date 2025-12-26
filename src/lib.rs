@@ -37,8 +37,6 @@ pub trait Shape {
     }
 
     fn as_any(&self) -> &dyn Any;
-
-    fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 
 pub trait Pattern {
@@ -324,10 +322,6 @@ impl Shape for Sphere {
     fn as_any(&self) -> &dyn Any {
         self
     }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl Shape for Plane {
@@ -369,11 +363,6 @@ impl Shape for Plane {
     fn as_any(&self) -> &dyn Any {
         self
     }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self
-    }
-
 }
 
 impl Shape for TestShape {
@@ -410,10 +399,6 @@ impl Shape for TestShape {
     }
 
     fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
         self
     }
 }
@@ -458,10 +443,6 @@ impl Shape for Cube {
     }
 
     fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
         self
     }
 }
@@ -537,10 +518,6 @@ impl Shape for Cylinder {
     }
 
     fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
         self
     }
 }
@@ -1190,14 +1167,14 @@ pub fn cube() -> Box<dyn Shape> {
         material: material()})
 }
 
-pub fn cylinder() -> Box<dyn Shape> {
+pub fn cylinder(minimum: Option<f32>, maximum: Option<f32>, closed: Option<bool>) -> Box<dyn Shape> {
     Box::new( Cylinder {
         id: Uuid::new_v4(),
         transform: Matrix::identity4x4(),
         material: material(),
-        minimum: f32::NEG_INFINITY,
-        maximum: f32::INFINITY,
-        closed: false,
+        minimum: minimum.unwrap_or(f32::NEG_INFINITY),
+        maximum: maximum.unwrap_or(f32::INFINITY),
+        closed: closed.unwrap_or(false),
     })
 }
 

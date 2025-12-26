@@ -11,7 +11,7 @@ mod cylinders {
         fn $name() {
             let (origin, direction) = $value;
 
-            let c = cylinder();
+            let c = cylinder(None, None, None);
 
             let direction = normalize(direction);
 
@@ -36,7 +36,7 @@ mod cylinders {
         fn $name() {
             let (origin, direction, t1, t2) = $value;
 
-            let c = cylinder();
+            let c = cylinder(None, None, None);
 
             let direction = normalize(direction);
 
@@ -63,7 +63,7 @@ mod cylinders {
         fn $name() {
             let (point, normal) = $value;
 
-            let c = cylinder();
+            let c = cylinder(None, None, None);
 
             let n = c.local_normal_at(point);
 
@@ -82,7 +82,7 @@ mod cylinders {
     #[test]
     /// The default minimum and maximum for a cylinder
     fn default_minimum_and_maximum_for_cylinder() {
-        let cyl = cylinder();
+        let cyl = cylinder(None, None, None);
         let deref_cyl = cyl.as_any().downcast_ref::<Cylinder>().unwrap();
         assert_eq!(f32::NEG_INFINITY, deref_cyl.minimum);
         assert_eq!(f32::INFINITY, deref_cyl.maximum);
@@ -95,11 +95,7 @@ mod cylinders {
         fn $name() {
             let (point, direction, count) = $value;
 
-            let mut c = cylinder();
-            let deref_cyl = c.as_mut_any().downcast_mut::<Cylinder>().unwrap();
-            deref_cyl.set_minimum(1.0);
-            deref_cyl.set_maximum(2.0);
-
+            let c = cylinder(Some(1.0), Some(2.0), None);
             let direction = normalize(direction);
 
             let r = ray(point, direction);
@@ -122,7 +118,7 @@ mod cylinders {
     #[test]
     /// The default closed value for a cylinder p. 185
     fn default_closed_value_for_cylinder() {
-        let cyl = cylinder();
+        let cyl = cylinder(None, None, None);
         let deref_cyl = cyl.as_any().downcast_ref::<Cylinder>().unwrap();
         assert!(!deref_cyl.closed);
     }
@@ -134,11 +130,7 @@ mod cylinders {
         fn $name() {
             let (point, direction, count) = $value;
 
-            let mut c = cylinder();
-            let deref_cyl = c.as_mut_any().downcast_mut::<Cylinder>().unwrap();
-            deref_cyl.set_minimum(1.0);
-            deref_cyl.set_maximum(2.0);
-            deref_cyl.set_closed(true);
+            let c = cylinder(Some(1.0), Some(2.0), Some(true));
 
             let direction = normalize(direction);
 
@@ -165,11 +157,7 @@ mod cylinders {
         fn $name() {
             let (point, normal) = $value;
 
-            let mut c = cylinder();
-            let deref_cyl = c.as_mut_any().downcast_mut::<Cylinder>().unwrap();
-            deref_cyl.set_minimum(1.0);
-            deref_cyl.set_maximum(2.0);
-            deref_cyl.set_closed(true);
+            let c = cylinder(Some(1.0), Some(2.0), Some(true));
 
             let n = c.local_normal_at(point);
 

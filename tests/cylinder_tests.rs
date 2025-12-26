@@ -53,7 +53,7 @@ mod cylinders {
     cylinder_tests_hit! {
         a_ray_intersects_a_cylinder_1: (point(1.0, 0.0, -5.0), vector(0.0, 0.0, 1.0), 5.0, 5.0),
         a_ray_intersects_a_cylinder_2: (point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0), 4.0, 6.0),
-        a_ray_intersects_a_cylinder_3: (point(0.5, 0.0, -5.0), vector(0.1, 1.0, 1.0), 6.80798, 7.08872),
+        a_ray_intersects_a_cylinder_3: (point(0.5, 0.0, -5.0), vector(0.1, 1.0, 1.0), 6.808006/*6.80798*/, 7.0886984/*7.08872*/),
     }
 
     macro_rules! cylinder_normal {

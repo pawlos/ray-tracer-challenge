@@ -526,7 +526,14 @@ impl Shape for Cylinder {
     }
 
     fn local_normal_at(&self, point: Point) -> Vector {
-        vector(point.x, 0.0, point.z)
+        let dist = point.x.powf(2.0) + point.z.powf(2.0);
+        if dist < 1.0f32 && point.y >= self.maximum - EPS {
+            vector(0.0, 1.0, 0.0)
+        } else if dist < 1.0f32 && point.y <= self.minimum + EPS {
+            vector(0.0, -1.0, 0.0)
+        } else {
+            vector(point.x, 0.0, point.z)
+        }
     }
 
     fn as_any(&self) -> &dyn Any {

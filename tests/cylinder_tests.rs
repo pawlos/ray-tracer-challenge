@@ -157,4 +157,33 @@ mod cylinders {
         capped_cylinder_4: (point(0.0, 0.0, -2.0), vector(0.0, 1.0, 2.0),  2),
         capped_cylinder_5: (point(0.0, -1.0, -2.0), vector(0.0, 1.0, 1.0),  2),
     }
+
+    macro_rules! cylinder_normal_end_caps {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (point, normal) = $value;
+
+            let mut c = cylinder();
+            let deref_cyl = c.as_mut_any().downcast_mut::<Cylinder>().unwrap();
+            deref_cyl.set_minimum(1.0);
+            deref_cyl.set_maximum(2.0);
+            deref_cyl.set_closed(true);
+
+            let n = c.local_normal_at(point);
+
+            assert_eq!(n, normal);
+        }
+    )*}
+    }
+
+    cylinder_normal_end_caps! {
+        cylinder_normal_end_caps_1: (point(0.0, 1.0, 0.0), vector(0.0, -1.0, 0.0)),
+        cylinder_normal_end_caps_2: (point(0.5, 1.0, 0.0), vector(0.0, -1.0, 0.0)),
+        cylinder_normal_end_caps_3: (point(0.0, 1.0, 0.5), vector(0.0, -1.0, 0.0)),
+        cylinder_normal_end_caps_4: (point(0.0, 2.0, 0.0), vector(0.0, 1.0, 0.0)),
+        cylinder_normal_end_caps_5: (point(0.5, 2.0, 0.0), vector(0.0, 1.0, 0.0)),
+        cylinder_normal_end_caps_6: (point(0.0, 2.0, 0.5), vector(0.0, 1.0, 0.0)),
+    }
 }

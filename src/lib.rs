@@ -126,6 +126,16 @@ pub struct Cylinder {
     pub closed: bool,
 }
 
+#[derive(Debug)]
+pub struct Cone {
+    id: Uuid,
+    pub transform: Matrix,
+    pub material: Material,
+    pub minimum: f32,
+    pub maximum: f32,
+    pub closed: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StripePattern {
     pub a: Color,
@@ -515,6 +525,58 @@ impl Shape for Cylinder {
         } else {
             vector(point.x, 0.0, point.z)
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Shape for Cone {
+    fn id(&self) -> Uuid { self.id }
+
+    fn transform(&self) -> Matrix { self.transform.clone() }
+
+    fn material(&self) -> &Material { &self.material }
+
+    fn mut_material(&mut self) -> &mut Material { &mut self.material }
+
+    fn set_transform(&mut self, transform: Matrix) { self.transform = transform; }
+
+    fn set_material(&mut self, material: Material) { self.material = material; }
+
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
+        let a = ray.direction.x.powf(2.0) - ray.direction.y.powf(2.0) + ray.direction.z.powf(2.0);
+
+        let b = 2.0 * ray.origin.x * ray.direction.x -
+                     2.0 * ray.origin.y * ray.direction.y +
+                     2.0 * ray.origin.z * ray.direction.z;
+
+        let c = ray.origin.x.powf(2.0) - ray.origin.y.powf(2.0) + ray.origin.z.powf(2.0);
+        if a.abs() < EPS {
+            if b != 0.0 {
+                return [intersection(-c/(2.0*b), self)].to_vec()
+            }
+            return [].to_vec();
+        }
+
+
+        let mut dist = b.powf(2.0) - 4.0*a*c;
+        if dist.abs() < EPS {
+            dist = 0.0;
+        }
+        if dist < 0.0 {
+            return [].to_vec();
+        }
+
+        let t0 = (-b - dist.sqrt())/(2.0 * a);
+        let t1 = (-b + dist.sqrt())/(2.0 * a);
+
+        [intersection(t0, self), intersection(t1, self)].to_vec()
+    }
+
+    fn local_normal_at(&self, point: Point) -> Vector {
+        todo!()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -1178,6 +1240,16 @@ pub fn cylinder(minimum: Option<f32>, maximum: Option<f32>, closed: Option<bool>
     })
 }
 
+pub fn cone(minimum: Option<f32>, maximum: Option<f32>, closed: Option<bool>) -> Box<dyn Shape> {
+    Box::new( Cone {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4(),
+        material: material(),
+        minimum: minimum.unwrap_or(f32::NEG_INFINITY),
+        maximum: maximum.unwrap_or(f32::INFINITY),
+        closed: closed.unwrap_or(false),
+    })
+}
 
 
 pub fn intersection(t:f32, object: &dyn Shape) -> Intersection {

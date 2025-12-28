@@ -26,8 +26,8 @@ mod cones {
     }
 
     cone_tests_hit! {
-        a_ray_hit_a_cone_1: (point(0.0, 0.0, -5.0),  vector(0.0, 0.0, 1.0), 5.0, 5.0),
-        a_ray_hit_a_cone_2: (point(0.0, 0.0, -5.0),  vector(1.0, 1.0, 1.0), 8.66025, 8.66025),
+        a_ray_hit_a_cone_1: (point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0), 5.0, 5.0),
+        a_ray_hit_a_cone_2: (point(0.0, 0.0, -5.0), vector(1.0, 1.0, 1.0), 8.66025, 8.66025),
         a_ray_hit_a_cone_3: (point(1.0, 1.0, -5.0), vector(-0.5, -1.0, 1.0), 4.55006, 49.44994),
     }
 
@@ -41,5 +41,29 @@ mod cones {
 
         assert_eq!(xs.len(), 1);
         assert!((xs[0].t - 0.35355).abs() < EPS);
+    }
+
+    macro_rules! cone_cap_tests_hit {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (origin, direction, count) = $value;
+
+            let c = cone(Some(-0.5), Some(0.5), Some(true));
+
+            let direction = normalize(direction);
+
+            let r = ray(origin, direction);
+            let xs = c.local_intersect(r);
+
+            assert_eq!(count, xs.len());
+        }
+    )*}
+    }
+    cone_cap_tests_hit! {
+        intersecting_a_cone_end_cap_1: (point(0.0, 0.0, -5.0), vector(0.0, 1.0, 0.0), 0),
+        intersecting_a_cone_end_cap_2: (point(0.0, 0.0, -0.25), vector(0.0, 1.0, 1.0), 2),
+        intersecting_a_cone_end_cap_3: (point(0.0, 0.0, -0.25), vector(0.0, 1.0, 0.0), 4),
     }
 }

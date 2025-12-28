@@ -494,24 +494,8 @@ impl Shape for Cylinder {
 
         let y0 = ray.origin.y + t0 * ray.direction.y;
         let y1 = ray.origin.y + t1 * ray.direction.y;
-        if !self.closed {
-            if self.minimum < y0 && y0 < self.maximum {
-                xs.push(intersection(t0, self))
-            }
-            if self.minimum < y1 && y1 < self.maximum {
-                xs.push(intersection(t1, self))
-            }
-        }
-        else {
-            if (self.minimum == f32::NEG_INFINITY || self.minimum - y0 < EPS) &&
-                (self.maximum == f32::INFINITY || y0 - self.minimum < EPS) {
-                xs.push(intersection(t0, self))
-            }
-            if (self.minimum == f32::NEG_INFINITY || self.minimum - y1 < EPS) &&
-                (self.maximum == f32::INFINITY || y1 - self.maximum < EPS) {
-                xs.push(intersection(t1, self))
-            }
-        }
+        let points = construct_intersections(self.minimum, self.maximum, self.closed, t0, t1, y0, y1);
+        points.iter().for_each(|p| xs.push(intersection(*p, self)));
         xs.append(&mut self.intersect_cap(ray));
         xs
     }
@@ -555,11 +539,13 @@ impl Shape for Cone {
         let c = ray.origin.x.powf(2.0) - ray.origin.y.powf(2.0) + ray.origin.z.powf(2.0);
         if a.abs() < EPS {
             if b != 0.0 {
-                return [intersection(-c/(2.0*b), self)].to_vec()
+                let mut xs: Vec<Intersection> = Vec::with_capacity(2);
+                xs.push(intersection(-c/(2.0*b), self));
+                xs.append(&mut self.intersect_cap(ray));
+                return xs;
             }
-            return [].to_vec();
+            return self.intersect_cap(ray);
         }
-
 
         let mut dist = b.powf(2.0) - 4.0*a*c;
         if dist.abs() < EPS {
@@ -569,10 +555,16 @@ impl Shape for Cone {
             return [].to_vec();
         }
 
-        let t0 = (-b - dist.sqrt())/(2.0 * a);
-        let t1 = (-b + dist.sqrt())/(2.0 * a);
-
-        [intersection(t0, self), intersection(t1, self)].to_vec()
+        let mut t0 = (-b - dist.sqrt())/(2.0 * a);
+        let mut t1 = (-b + dist.sqrt())/(2.0 * a);
+        if t0 > t1 { swap(&mut t0, &mut t1); }
+        let mut xs: Vec<Intersection> = Vec::with_capacity(2);
+        let y0 = ray.origin.y + t0 * ray.direction.y;
+        let y1 = ray.origin.y + t1 * ray.direction.y;
+        let points = construct_intersections(self.minimum, self.maximum, self.closed, t0, t1, y0, y1);
+        points.iter().for_each(|p| xs.push(intersection(*p, self)));
+        xs.append(&mut self.intersect_cap(ray));
+        xs
     }
 
     fn local_normal_at(&self, point: Point) -> Vector {
@@ -638,18 +630,6 @@ pub struct Camera {
 }
 
 impl Cylinder {
-    pub fn set_maximum(&mut self, maximum: f32) {
-        self.maximum = maximum;
-    }
-
-    pub fn set_minimum(&mut self, minimum: f32) {
-        self.minimum = minimum;
-    }
-
-    pub fn set_closed(&mut self, closed: bool) {
-        self.closed = closed;
-    }
-
     fn check_cap(&self, ray: Ray, t: f32) -> bool {
         let x = ray.origin.x + t * ray.direction.x;
         let z = ray.origin.z + t * ray.direction.z;
@@ -670,6 +650,55 @@ impl Cylinder {
 
         let t2 = (self.maximum - ray.origin.y) / ray.direction.y;
         if self.check_cap(ray, t2) {
+            xs.push(intersection(t2, self))
+        }
+        xs
+    }
+}
+
+fn construct_intersections(minimum: f32, maximum: f32, closed: bool, t0: f32, t1: f32, y0: f32, y1: f32) -> Vec<f32> {
+    let mut xs: Vec<f32> = Vec::with_capacity(2);
+    if !closed {
+        if minimum < y0 && y0 < maximum {
+            xs.push(t0)
+        }
+        if minimum < y1 && y1 < maximum {
+            xs.push(t1)
+        }
+    } else {
+        if (minimum == f32::NEG_INFINITY || minimum - EPS < y0) &&
+            (maximum == f32::INFINITY || y0 < maximum + EPS) {
+                 xs.push(t0)
+        }
+        if (minimum == f32::NEG_INFINITY || minimum - EPS < y1) &&
+           (maximum == f32::INFINITY || y1 < maximum + EPS) {
+             xs.push(t1)
+        }
+    }
+    xs
+}
+
+impl Cone {
+    fn check_cap(&self, ray: Ray, t: f32, y: f32) -> bool {
+        let x = ray.origin.x + t * ray.direction.x;
+        let z = ray.origin.z + t * ray.direction.z;
+
+        (x.powf(2.0) + z.powf(2.0)) <= y.abs()
+    }
+
+    fn intersect_cap(&self, ray: Ray) -> Vec<Intersection> {
+        if !self.closed || ray.direction.y.abs() < f32::EPSILON {
+            return [].to_vec();
+        }
+
+        let mut xs: Vec<Intersection> = Vec::with_capacity(2);
+        let t1 = (self.minimum - ray.origin.y) / ray.direction.y;
+        if self.check_cap(ray, t1, self.minimum) {
+            xs.push(intersection(t1, self))
+        }
+
+        let t2 = (self.maximum - ray.origin.y) / ray.direction.y;
+        if self.check_cap(ray, t2, self.maximum) {
             xs.push(intersection(t2, self))
         }
         xs

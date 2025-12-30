@@ -66,4 +66,26 @@ mod cones {
         intersecting_a_cone_end_cap_2: (point(0.0, 0.0, -0.25), vector(0.0, 1.0, 1.0), 2),
         intersecting_a_cone_end_cap_3: (point(0.0, 0.0, -0.25), vector(0.0, 1.0, 0.0), 4),
     }
+
+    macro_rules! cone_normal {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let (point, normal) = $value;
+
+            let c = cone(None, None, None);
+
+            let local_normal = c.local_normal_at(point);
+
+            assert_eq!(local_normal, normal);
+        }
+    )*}
+    }
+
+    cone_normal! {
+        computing_normal_1: (point(0.0, 0.0, 0.0), vector(0.0, 0.0, 0.0)),
+        computing_normal_2: (point(1.0, 1.0, 1.0), vector(1.0, -2.0f32.sqrt(), 1.0)),
+        computing_normal_3: (point(-1.0, -1.0, 0.0), vector(-1.0, 1.0, 0.0)),
+    }
 }

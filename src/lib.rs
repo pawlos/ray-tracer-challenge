@@ -568,7 +568,16 @@ impl Shape for Cone {
     }
 
     fn local_normal_at(&self, point: Point) -> Vector {
-        todo!()
+        let dist = point.x.powf(2.0) + point.z.powf(2.0);
+        if dist < 1.0f32 && point.y >= self.maximum - EPS {
+            vector(0.0, 1.0, 0.0)
+        } else if dist < 1.0f32 && point.y <= self.minimum + EPS {
+            vector(0.0, -1.0, 0.0)
+        } else {
+            let y = (point.x.powf(2.0) + point.z.powf(2.0)).sqrt();
+            let y = if point.y > 0.0f32 { -y } else { y };
+            vector(point.x, y, point.z)
+        }
     }
 
     fn as_any(&self) -> &dyn Any {

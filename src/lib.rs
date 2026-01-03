@@ -136,6 +136,12 @@ pub struct Cone {
     pub closed: bool,
 }
 
+#[derive(Debug)]
+pub struct Group {
+    id: Uuid,
+    transform: Matrix,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StripePattern {
     pub a: Color,
@@ -585,6 +591,40 @@ impl Shape for Cone {
     }
 }
 
+impl Shape for Group {
+    fn id(&self) -> Uuid { self.id }
+
+    fn transform(&self) -> Matrix { self.transform.clone() }
+
+    fn material(&self) -> &Material {
+        todo!()
+    }
+
+    fn mut_material(&mut self) -> &mut Material {
+        todo!()
+    }
+
+    fn set_transform(&mut self, transform: Matrix) {
+        self.transform = transform;
+    }
+
+    fn set_material(&mut self, material: Material) {
+        todo!()
+    }
+
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
+        todo!()
+    }
+
+    fn local_normal_at(&self, point: Point) -> Vector {
+        todo!()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Intersection<'a> {
     pub t: f32,
@@ -712,6 +752,10 @@ impl Cone {
         }
         xs
     }
+}
+
+impl Group {
+    pub fn count(&self) -> usize { 0 }
 }
 
 impl Canvas {
@@ -1286,6 +1330,13 @@ pub fn cone(minimum: Option<f32>, maximum: Option<f32>, closed: Option<bool>) ->
         minimum: minimum.unwrap_or(f32::NEG_INFINITY),
         maximum: maximum.unwrap_or(f32::INFINITY),
         closed: closed.unwrap_or(false),
+    })
+}
+
+pub fn group() -> Box<dyn Shape> {
+    Box::new(Group {
+        id: Uuid::new_v4(),
+        transform: Matrix::identity4x4()
     })
 }
 
